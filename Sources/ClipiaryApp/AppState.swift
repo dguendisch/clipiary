@@ -1,14 +1,27 @@
+import AppKit
 import Foundation
 import Observation
 
 @MainActor
 @Observable
 final class AppState {
+    enum PopoverTab: String, CaseIterable, Identifiable {
+        case history = "History"
+        case favorites = "Favorites"
+
+        var id: Self { self }
+    }
+
     static let shared = AppState()
 
     let settings = AppSettings()
     let history = HistoryStore()
     let permissionManager = AccessibilityPermissionManager()
+    var selectedTab: PopoverTab = .history
+    var searchQuery = ""
+    var selectedHistoryItemID: HistoryItem.ID?
+    var isRecordingShortcut = false
+    private(set) var searchFocusRequestID = 0
 
     @ObservationIgnored private let captureCoordinator: CaptureCoordinator
     @ObservationIgnored private let clipboardMonitor: ClipboardMonitor
@@ -30,6 +43,7 @@ final class AppState {
         permissionManager.refreshTrust()
         clipboardMonitor.start()
         autoSelectEngine.start()
+        ensureSelection()
     }
 
     func refreshAutoSelectPermissions() {
@@ -39,5 +53,137 @@ final class AppState {
 
     func restore(_ item: HistoryItem) {
         captureCoordinator.restore(item)
+    }
+
+    func didOpenPopover() {
+        ensureSelection()
+        requestSearchFocus()
+    }
+
+    var historyItems: [HistoryItem] {
+        filteredItems(for: .history)
+    }
+
+    var favoriteItems: [HistoryItem] {
+        filteredItems(for: .favorites)
+    }
+
+    var activeItems: [HistoryItem] {
+        selectedTab == .history ? historyItems : favoriteItems
+    }
+
+    func filteredItems(for tab: PopoverTab) -> [HistoryItem] {
+        let baseItems = filteredItems()
+        switch tab {
+        case .history:
+            return baseItems.filter { !$0.isFavorite }
+        case .favorites:
+            return baseItems.filter(\.isFavorite)
+        }
+    }
+
+    func filteredItems() -> [HistoryItem] {
+        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !query.isEmpty else {
+            return history.items
+        }
+
+        return history.items.filter { item in
+            item.text.localizedCaseInsensitiveContains(query) ||
+            item.appName.localizedCaseInsensitiveContains(query) ||
+            (item.bundleID?.localizedCaseInsensitiveContains(query) ?? false)
+        }
+    }
+
+    func setSelectedTab(_ tab: PopoverTab) {
+        selectedTab = tab
+        ensureSelection()
+        requestSearchFocus()
+    }
+
+    func moveTab(direction: Int) {
+        let tabs = PopoverTab.allCases
+        guard let index = tabs.firstIndex(of: selectedTab) else {
+            return
+        }
+
+        let nextIndex = min(max(index + direction, 0), tabs.count - 1)
+        setSelectedTab(tabs[nextIndex])
+    }
+
+    func moveSelection(direction: Int) {
+        let items = activeItems
+        guard !items.isEmpty else {
+            selectedHistoryItemID = nil
+            return
+        }
+
+        guard let currentSelectionID = selectedHistoryItemID,
+              let currentIndex = items.firstIndex(where: { $0.id == currentSelectionID }) else {
+            selectedHistoryItemID = direction >= 0 ? items.first?.id : items.last?.id
+            return
+        }
+
+        let nextIndex = min(max(currentIndex + direction, 0), items.count - 1)
+        selectedHistoryItemID = items[nextIndex].id
+    }
+
+    func ensureSelection() {
+        let items = activeItems
+        guard !items.isEmpty else {
+            selectedHistoryItemID = nil
+            return
+        }
+
+        if let selectedHistoryItemID,
+           items.contains(where: { $0.id == selectedHistoryItemID }) {
+            return
+        }
+
+        selectedHistoryItemID = items.first?.id
+    }
+
+    func restoreSelectedItem() {
+        guard let item = selectedItem else {
+            return
+        }
+        restore(item)
+    }
+
+    func toggleFavoriteSelectedItem() {
+        guard let item = selectedItem else {
+            return
+        }
+        history.toggleFavorite(item)
+        ensureSelection()
+    }
+
+    func deleteSelectedItem() {
+        guard let item = selectedItem else {
+            return
+        }
+        history.delete(item)
+        ensureSelection()
+    }
+
+    var selectedItem: HistoryItem? {
+        guard let selectedHistoryItemID else {
+            return nil
+        }
+
+        return activeItems.first(where: { $0.id == selectedHistoryItemID })
+    }
+
+    func updateGlobalShortcut(from event: NSEvent) {
+        guard let shortcut = GlobalShortcut(event: event) else {
+            return
+        }
+
+        settings.updateGlobalShortcut(shortcut)
+        isRecordingShortcut = false
+    }
+
+    func requestSearchFocus() {
+        searchFocusRequestID &+= 1
     }
 }

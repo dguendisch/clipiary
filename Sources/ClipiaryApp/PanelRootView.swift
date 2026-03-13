@@ -2,18 +2,9 @@ import AppKit
 import SwiftUI
 
 struct PanelRootView: View {
-    private enum Tab: String, CaseIterable, Identifiable {
-        case history = "History"
-        case favorites = "Favorites"
-
-        var id: Self { self }
-    }
-
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
-    @State private var selectedTab: Tab = .history
-    @State private var searchQuery = ""
 
     var body: some View {
         VStack(spacing: 12) {
@@ -26,6 +17,9 @@ struct PanelRootView: View {
         .frame(width: 376, height: 520)
         .background(panelBackground)
         .task {
+            appState.requestSearchFocus()
+        }
+        .onChange(of: appState.searchFocusRequestID) {
             searchFocused = true
         }
     }
@@ -47,46 +41,58 @@ struct PanelRootView: View {
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text(selectedTab.rawValue)
+                Text(appState.selectedTab.rawValue)
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
-                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                if !appState.searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     Button("Clear Search") {
-                        searchQuery = ""
+                        appState.searchQuery = ""
                         searchFocused = true
+                        appState.ensureSelection()
                     }
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
                 }
-                Text("\(activeItems.count)")
+                Text("\(appState.activeItems.count)")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
 
-            if selectedTab == .history || !favoriteItems.isEmpty {
+            if appState.selectedTab == .history || !appState.favoriteItems.isEmpty {
                 searchField
             }
 
-            ScrollView {
-                VStack(spacing: 12) {
-                    if activeItems.isEmpty {
-                        emptyState
-                    } else {
-                        if selectedTab == .history {
-                            historyGroup(title: "Recent Copies", items: historyItems)
+            ScrollViewReader { proxy in
+                ScrollView {
+                    VStack(spacing: 12) {
+                        if appState.activeItems.isEmpty {
+                            emptyState
                         } else {
-                            historyGroup(title: "Saved Favorites", items: favoriteItems)
+                            if appState.selectedTab == .history {
+                                historyGroup(title: "Recent Copies", items: appState.historyItems)
+                            } else {
+                                historyGroup(title: "Saved Favorites", items: appState.favoriteItems)
+                            }
                         }
                     }
+                    .padding(10)
                 }
-                .padding(10)
+                .frame(maxWidth: .infinity, maxHeight: .infinity)
+                .background(
+                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                        .fill(panelFill)
+                )
+                .onChange(of: appState.selectedHistoryItemID) {
+                    guard let selectedID = appState.selectedHistoryItemID else {
+                        return
+                    }
+
+                    withAnimation(.easeInOut(duration: 0.12)) {
+                        proxy.scrollTo(selectedID, anchor: .center)
+                    }
+                }
             }
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .background(
-                RoundedRectangle(cornerRadius: 12, style: .continuous)
-                    .fill(panelFill)
-            )
         }
     }
 
@@ -138,6 +144,19 @@ struct PanelRootView: View {
                         set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
                     ), in: 100...2000, step: 50)
                     .labelsHidden()
+                }
+            }
+
+            HStack(spacing: 12) {
+                settingMetric(
+                    title: "Global shortcut",
+                    value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
+                ) {
+                    Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
+                        appState.isRecordingShortcut.toggle()
+                    }
+                    .buttonStyle(.borderless)
+                    .font(.system(size: 11, weight: .medium))
                 }
             }
         }
@@ -193,13 +212,20 @@ struct PanelRootView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("Search clipboard history", text: $searchQuery)
-            .textFieldStyle(.plain)
-            .focused($searchFocused)
-            if !searchQuery.isEmpty {
+            TextField("Search clipboard history", text: Binding(
+                get: { appState.searchQuery },
+                set: { appState.searchQuery = $0 }
+            ))
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .onChange(of: appState.searchQuery) {
+                    appState.ensureSelection()
+                }
+            if !appState.searchQuery.isEmpty {
                 Button {
-                    searchQuery = ""
+                    appState.searchQuery = ""
                     searchFocused = true
+                    appState.ensureSelection()
                 } label: {
                     Image(systemName: "xmark.circle.fill")
                         .foregroundStyle(.secondary)
@@ -235,6 +261,7 @@ struct PanelRootView: View {
         VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .top, spacing: 8) {
                 Button {
+                    appState.selectedHistoryItemID = item.id
                     appState.restore(item)
                 } label: {
                     HStack(alignment: .top, spacing: 8) {
@@ -255,7 +282,9 @@ struct PanelRootView: View {
                 Spacer(minLength: 8)
 
                 Button {
+                    appState.selectedHistoryItemID = item.id
                     appState.history.toggleFavorite(item)
+                    appState.ensureSelection()
                 } label: {
                     Image(systemName: item.isFavorite ? "star.fill" : "star")
                         .font(.system(size: 11, weight: .medium))
@@ -266,7 +295,9 @@ struct PanelRootView: View {
                 .opacity(hoveredItemID == item.id || item.isFavorite ? 1 : 0.55)
 
                 Button {
+                    appState.selectedHistoryItemID = item.id
                     appState.history.delete(item)
+                    appState.ensureSelection()
                 } label: {
                     Image(systemName: "xmark")
                         .font(.system(size: 10, weight: .bold))
@@ -289,8 +320,12 @@ struct PanelRootView: View {
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
+        .id(item.id)
         .background(rowBackground(for: item))
         .contentShape(Rectangle())
+        .onTapGesture {
+            appState.selectedHistoryItemID = item.id
+        }
         .onHover { isHovered in
             hoveredItemID = isHovered ? item.id : (hoveredItemID == item.id ? nil : hoveredItemID)
         }
@@ -315,7 +350,7 @@ struct PanelRootView: View {
 
     private func rowBackground(for item: HistoryItem) -> some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(hoveredItemID == item.id ? hoverFill : Color.clear)
+            .fill(rowFill(for: item))
     }
 
     private var panelBackground: some View {
@@ -331,42 +366,8 @@ struct PanelRootView: View {
         Color.accentColor.opacity(0.09)
     }
 
-    private var historyItems: [HistoryItem] {
-        filteredItemsForSelectedTab(tab: .history)
-    }
-
-    private var favoriteItems: [HistoryItem] {
-        filteredItemsForSelectedTab(tab: .favorites)
-    }
-
-    private var activeItems: [HistoryItem] {
-        selectedTab == .history ? historyItems : favoriteItems
-    }
-
-    private var filteredItems: [HistoryItem] {
-        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else {
-            return appState.history.items
-        }
-
-        return appState.history.items.filter { item in
-            item.text.localizedCaseInsensitiveContains(query) ||
-            item.appName.localizedCaseInsensitiveContains(query) ||
-            (item.bundleID?.localizedCaseInsensitiveContains(query) ?? false)
-        }
-    }
-
-    private func filteredItemsForSelectedTab(tab: Tab) -> [HistoryItem] {
-        switch tab {
-        case .history:
-            return filteredItems.filter { !$0.isFavorite }
-        case .favorites:
-            return filteredItems.filter(\.isFavorite)
-        }
-    }
-
     private var emptyMessage: String {
-        switch selectedTab {
+        switch appState.selectedTab {
         case .history:
             return "Copy something, or enable autoselect to capture highlighted text."
         case .favorites:
@@ -375,7 +376,7 @@ struct PanelRootView: View {
     }
 
     private var emptyTitle: String {
-        switch selectedTab {
+        switch appState.selectedTab {
         case .history:
             return "No clipboard history yet"
         case .favorites:
@@ -385,7 +386,7 @@ struct PanelRootView: View {
 
     private var tabBar: some View {
         HStack(spacing: 6) {
-            ForEach(Tab.allCases) { tab in
+            ForEach(AppState.PopoverTab.allCases) { tab in
                 tabButton(for: tab)
             }
         }
@@ -396,12 +397,12 @@ struct PanelRootView: View {
         )
     }
 
-    private func tabButton(for tab: Tab) -> some View {
-        let isSelected = tab == selectedTab
-        let count = tab == .history ? historyItems.count : favoriteItems.count
+    private func tabButton(for tab: AppState.PopoverTab) -> some View {
+        let isSelected = tab == appState.selectedTab
+        let count = tab == .history ? appState.historyItems.count : appState.favoriteItems.count
 
         return Button {
-            selectedTab = tab
+            appState.setSelectedTab(tab)
             searchFocused = true
         } label: {
             HStack(spacing: 6) {
@@ -422,6 +423,18 @@ struct PanelRootView: View {
         .frame(maxWidth: .infinity)
         .buttonStyle(.plain)
         .foregroundStyle(isSelected ? .primary : .secondary)
+    }
+
+    private func rowFill(for item: HistoryItem) -> Color {
+        if appState.selectedHistoryItemID == item.id {
+            return Color.accentColor.opacity(0.18)
+        }
+
+        if hoveredItemID == item.id {
+            return hoverFill
+        }
+
+        return .clear
     }
 
     private func settingMetric<Control: View>(title: String, value: String, @ViewBuilder control: () -> Control) -> some View {

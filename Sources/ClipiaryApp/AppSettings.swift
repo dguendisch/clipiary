@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 import Observation
 
@@ -11,6 +12,8 @@ final class AppSettings {
         static let autoSelectCooldownMilliseconds = "autoSelectCooldownMilliseconds"
         static let ignoredBundleIDs = "ignoredBundleIDs"
         static let historyLimit = "historyLimit"
+        static let globalHotKeyKeyCode = "globalHotKeyKeyCode"
+        static let globalHotKeyModifiers = "globalHotKeyModifiers"
     }
 
     private let defaults: UserDefaults
@@ -39,6 +42,14 @@ final class AppSettings {
         didSet { defaults.set(historyLimit, forKey: Keys.historyLimit) }
     }
 
+    var globalHotKeyKeyCode: Int {
+        didSet { defaults.set(globalHotKeyKeyCode, forKey: Keys.globalHotKeyKeyCode) }
+    }
+
+    var globalHotKeyModifiers: Int {
+        didSet { defaults.set(globalHotKeyModifiers, forKey: Keys.globalHotKeyModifiers) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -48,6 +59,8 @@ final class AppSettings {
             Keys.autoSelectCooldownMilliseconds: 350,
             Keys.ignoredBundleIDs: [],
             Keys.historyLimit: 100,
+            Keys.globalHotKeyKeyCode: 9,
+            Keys.globalHotKeyModifiers: Int((NSEvent.ModifierFlags.command.union(.shift)).rawValue),
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -56,6 +69,20 @@ final class AppSettings {
         autoSelectCooldownMilliseconds = defaults.integer(forKey: Keys.autoSelectCooldownMilliseconds)
         ignoredBundleIDs = defaults.stringArray(forKey: Keys.ignoredBundleIDs) ?? []
         historyLimit = defaults.integer(forKey: Keys.historyLimit)
+        globalHotKeyKeyCode = defaults.integer(forKey: Keys.globalHotKeyKeyCode)
+        globalHotKeyModifiers = defaults.integer(forKey: Keys.globalHotKeyModifiers)
+    }
+
+    var globalShortcut: GlobalShortcut {
+        GlobalShortcut(
+            keyCode: UInt32(globalHotKeyKeyCode),
+            modifiers: NSEvent.ModifierFlags(rawValue: UInt(globalHotKeyModifiers))
+        )
+    }
+
+    func updateGlobalShortcut(_ shortcut: GlobalShortcut) {
+        globalHotKeyKeyCode = Int(shortcut.keyCode)
+        globalHotKeyModifiers = Int(shortcut.modifiers.rawValue)
     }
 
     func ignores(bundleID: String?) -> Bool {

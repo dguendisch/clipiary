@@ -1,10 +1,13 @@
 import AppKit
+import Observation
 import SwiftUI
 
 @MainActor
 final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private var statusSyncTimer: Timer?
+    private var localKeyMonitor: Any?
     private let popover = NSPopover()
+    private let hotKeyManager = GlobalHotKeyManager()
     private lazy var statusItem: NSStatusItem = {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.behavior = .removalAllowed
@@ -21,6 +24,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         NSApplication.shared.setActivationPolicy(.accessory)
         appState.start()
         configurePopover()
+        configureHotKey()
+        configureKeyMonitor()
         updateStatusItem()
         statusSyncTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -55,6 +60,91 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         )
     }
 
+    private func configureHotKey() {
+        hotKeyManager.onTrigger = { [weak self] in
+            self?.togglePopover()
+        }
+        registerHotKey()
+        synchronizeHotKeyRegistration()
+    }
+
+    private func registerHotKey() {
+        hotKeyManager.register(shortcut: appState.settings.globalShortcut)
+    }
+
+    private func synchronizeHotKeyRegistration() {
+        _ = withObservationTracking {
+            (appState.settings.globalHotKeyKeyCode, appState.settings.globalHotKeyModifiers)
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.registerHotKey()
+                self?.synchronizeHotKeyRegistration()
+            }
+        }
+    }
+
+    private func configureKeyMonitor() {
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            self?.handleKeyEvent(event) ?? event
+        }
+    }
+
+    private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+        guard popover.isShown else {
+            return event
+        }
+
+        if appState.isRecordingShortcut {
+            switch event.keyCode {
+            case 53:
+                appState.isRecordingShortcut = false
+            default:
+                appState.updateGlobalShortcut(from: event)
+            }
+            return nil
+        }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        if modifiers == .command,
+           event.charactersIgnoringModifiers?.lowercased() == "f" {
+            appState.requestSearchFocus()
+            return nil
+        }
+
+        if !modifiers.isDisjoint(with: [.command, .option, .control]) {
+            return event
+        }
+
+        switch event.keyCode {
+        case 123:
+            appState.moveTab(direction: -1)
+            return nil
+        case 124:
+            appState.moveTab(direction: 1)
+            return nil
+        case 125:
+            appState.moveSelection(direction: 1)
+            return nil
+        case 126:
+            appState.moveSelection(direction: -1)
+            return nil
+        case 36:
+            appState.restoreSelectedItem()
+            return nil
+        case 51:
+            appState.deleteSelectedItem()
+            return nil
+        case 49:
+            appState.toggleFavoriteSelectedItem()
+            return nil
+        case 53:
+            popover.performClose(nil)
+            return nil
+        default:
+            return event
+        }
+    }
+
     @objc
     private func togglePopover() {
         guard let button = statusItem.button else {
@@ -65,11 +155,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             popover.performClose(nil)
         } else {
             button.isHighlighted = true
+            appState.didOpenPopover()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
         }
     }
 
     func popoverDidClose(_ notification: Notification) {
         statusItem.button?.isHighlighted = false
+        appState.isRecordingShortcut = false
     }
 }
