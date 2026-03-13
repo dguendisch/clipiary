@@ -84,12 +84,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     private func configureKeyMonitor() {
-        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: .keyDown) { [weak self] event in
-            self?.handleKeyEvent(event) ?? event
+        localKeyMonitor = NSEvent.addLocalMonitorForEvents(matching: [.keyDown, .keyUp]) { [weak self] event in
+            self?.handleMonitoredEvent(event) ?? event
         }
     }
 
-    private func handleKeyEvent(_ event: NSEvent) -> NSEvent? {
+    private func handleMonitoredEvent(_ event: NSEvent) -> NSEvent? {
+        if shouldSuppressKeyUp(event) {
+            return nil
+        }
+
+        guard event.type == .keyDown else {
+            return event
+        }
+
+        return handleKeyDownEvent(event)
+    }
+
+    private func handleKeyDownEvent(_ event: NSEvent) -> NSEvent? {
         guard popover.isShown else {
             return event
         }
@@ -113,7 +125,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return nil
         }
 
-        if modifiers == [.command, .shift],
+        if modifiers.contains([.command, .shift]),
            normalizedCharacters == "f" {
             appState.toggleFavoriteSelectedItem()
             return nil
@@ -148,6 +160,29 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         default:
             return event
         }
+    }
+
+    private func shouldSuppressKeyUp(_ event: NSEvent) -> Bool {
+        guard popover.isShown, event.type == .keyUp else {
+            return false
+        }
+
+        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+        let normalizedCharacters = event.charactersIgnoringModifiers?.lowercased()
+
+        if event.keyCode == 53 {
+            return true
+        }
+
+        if modifiers == .command, normalizedCharacters == "f" {
+            return true
+        }
+
+        if modifiers.contains([.command, .shift]), normalizedCharacters == "f" {
+            return true
+        }
+
+        return false
     }
 
     @objc
