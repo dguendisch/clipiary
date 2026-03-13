@@ -234,11 +234,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc
-    func closePopoverCommandFromResponderChain() {
-        closePopoverCommand()
-    }
-
-    @objc
     private func closePopoverCommand() {
         guard popover.isShown else {
             return

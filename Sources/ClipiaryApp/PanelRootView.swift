@@ -3,6 +3,7 @@ import SwiftUI
 
 struct PanelRootView: View {
     @Environment(AppState.self) private var appState
+    @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
 
     var body: some View {
@@ -17,6 +18,9 @@ struct PanelRootView: View {
         .background(panelBackground)
         .task {
             appState.requestSearchFocus()
+        }
+        .onChange(of: appState.searchFocusRequestID) {
+            searchFocused = true
         }
     }
 
@@ -208,7 +212,15 @@ struct PanelRootView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            PopoverSearchField()
+            TextField("Search clipboard history", text: Binding(
+                get: { appState.searchQuery },
+                set: { appState.searchQuery = $0 }
+            ))
+                .textFieldStyle(.plain)
+                .focused($searchFocused)
+                .onChange(of: appState.searchQuery) {
+                    appState.ensureSelection()
+                }
             if !appState.searchQuery.isEmpty {
                 Button {
                     appState.searchQuery = ""
