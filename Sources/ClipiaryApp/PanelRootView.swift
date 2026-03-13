@@ -2,6 +2,13 @@ import AppKit
 import SwiftUI
 
 struct PanelRootView: View {
+    private static let integerFormatter: NumberFormatter = {
+        let formatter = NumberFormatter()
+        formatter.numberStyle = .none
+        formatter.generatesDecimalNumbers = false
+        return formatter
+    }()
+
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
@@ -170,11 +177,14 @@ struct PanelRootView: View {
                             title: "Cooldown",
                             value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
                         ) {
-                            Stepper("", value: Binding(
-                                get: { appState.settings.autoSelectCooldownMilliseconds },
-                                set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
-                            ), in: 100...2000, step: 50)
-                            .labelsHidden()
+                            numericSettingField(
+                                value: Binding(
+                                    get: { appState.settings.autoSelectCooldownMilliseconds },
+                                    set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2_000) }
+                                ),
+                                range: 100...2_000,
+                                width: 70
+                            )
                         }
                     }
 
@@ -183,11 +193,14 @@ struct PanelRootView: View {
                             title: "History limit",
                             value: "\(appState.settings.historyLimit) items"
                         ) {
-                            Stepper("", value: Binding(
-                                get: { appState.settings.historyLimit },
-                                set: { appState.settings.historyLimit = min(max(25, $0), 1_000) }
-                            ), in: 25...1_000, step: 25)
-                            .labelsHidden()
+                            numericSettingField(
+                                value: Binding(
+                                    get: { appState.settings.historyLimit },
+                                    set: { appState.settings.historyLimit = min(max(25, $0), 1_000) }
+                                ),
+                                range: 25...1_000,
+                                width: 70
+                            )
                         }
                     }
 
@@ -545,5 +558,19 @@ struct PanelRootView: View {
             RoundedRectangle(cornerRadius: 8, style: .continuous)
                 .fill(Color.white.opacity(0.001))
         )
+    }
+
+    private func numericSettingField(value: Binding<Int>, range: ClosedRange<Int>, width: CGFloat) -> some View {
+        TextField("", value: value, formatter: Self.integerFormatter)
+            .textFieldStyle(.plain)
+            .multilineTextAlignment(.trailing)
+            .font(.system(size: 11, weight: .semibold, design: .monospaced))
+            .frame(width: width)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 6)
+            .background(
+                RoundedRectangle(cornerRadius: 7, style: .continuous)
+                    .fill(Color.black.opacity(0.05))
+            )
     }
 }
