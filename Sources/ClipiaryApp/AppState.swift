@@ -57,7 +57,6 @@ final class AppState {
 
     func didOpenPopover() {
         ensureSelection()
-        requestSearchFocus()
     }
 
     var historyItems: [HistoryItem] {
@@ -98,7 +97,6 @@ final class AppState {
     func setSelectedTab(_ tab: PopoverTab) {
         selectedTab = tab
         ensureSelection()
-        requestSearchFocus()
     }
 
     func moveTab(direction: Int) {

@@ -15,9 +15,6 @@ struct PanelRootView: View {
         .padding(12)
         .frame(width: 376, height: 520)
         .background(panelBackground)
-        .task {
-            appState.requestSearchFocus()
-        }
     }
 
     private var header: some View {
