@@ -143,10 +143,6 @@ struct PanelRootView: View {
     private var settingsTray: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack(spacing: 12) {
-                Toggle("Paste on select", isOn: Binding(
-                    get: { appState.settings.pasteOnSelect },
-                    set: { appState.settings.pasteOnSelect = $0 }
-                ))
                 Toggle("Show status text", isOn: Binding(
                     get: { appState.settings.showRecentItemInStatusBar },
                     set: { appState.settings.showRecentItemInStatusBar = $0 }

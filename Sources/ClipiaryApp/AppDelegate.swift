@@ -87,11 +87,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSSear
             isOn: appState.settings.isAutoSelectEnabled,
             action: #selector(toggleAutoSelect)
         ))
-        rootMenu.addItem(toggleItem(
-            title: "Paste on Select",
-            isOn: appState.settings.pasteOnSelect,
-            action: #selector(togglePasteOnSelect)
-        ))
 
         if !appState.permissionManager.isTrusted {
             rootMenu.addItem(.separator())
@@ -205,12 +200,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSMenuDelegate, NSSear
     private func toggleAutoSelect() {
         appState.settings.isAutoSelectEnabled.toggle()
         updateStatusItem()
-        rebuildMenus()
-    }
-
-    @objc
-    private func togglePasteOnSelect() {
-        appState.settings.pasteOnSelect.toggle()
         rebuildMenus()
     }
 

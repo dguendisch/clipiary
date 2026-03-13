@@ -12,7 +12,6 @@ final class AppSettings {
         static let ignoredBundleIDs = "ignoredBundleIDs"
         static let historyLimit = "historyLimit"
         static let showRecentItemInStatusBar = "showRecentItemInStatusBar"
-        static let pasteOnSelect = "pasteOnSelect"
     }
 
     private let defaults: UserDefaults
@@ -45,10 +44,6 @@ final class AppSettings {
         didSet { defaults.set(showRecentItemInStatusBar, forKey: Keys.showRecentItemInStatusBar) }
     }
 
-    var pasteOnSelect: Bool {
-        didSet { defaults.set(pasteOnSelect, forKey: Keys.pasteOnSelect) }
-    }
-
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -59,7 +54,6 @@ final class AppSettings {
             Keys.ignoredBundleIDs: [],
             Keys.historyLimit: 100,
             Keys.showRecentItemInStatusBar: false,
-            Keys.pasteOnSelect: false,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -69,7 +63,6 @@ final class AppSettings {
         ignoredBundleIDs = defaults.stringArray(forKey: Keys.ignoredBundleIDs) ?? []
         historyLimit = defaults.integer(forKey: Keys.historyLimit)
         showRecentItemInStatusBar = defaults.bool(forKey: Keys.showRecentItemInStatusBar)
-        pasteOnSelect = defaults.bool(forKey: Keys.pasteOnSelect)
     }
 
     func ignores(bundleID: String?) -> Bool {

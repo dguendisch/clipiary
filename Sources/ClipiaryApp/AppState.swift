@@ -39,8 +39,5 @@ final class AppState {
 
     func restore(_ item: HistoryItem) {
         captureCoordinator.restore(item)
-        if settings.pasteOnSelect {
-            PasteService.paste()
-        }
     }
 }
