@@ -66,6 +66,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         focusSearchItem.target = self
         appMenu.addItem(focusSearchItem)
 
+        let toggleFavoriteItem = NSMenuItem(
+            title: "Toggle Favorite",
+            action: #selector(toggleFavoriteCommand),
+            keyEquivalent: "f"
+        )
+        toggleFavoriteItem.keyEquivalentModifierMask = [.command, .shift]
+        toggleFavoriteItem.target = self
+        appMenu.addItem(toggleFavoriteItem)
+
         let closePopoverItem = NSMenuItem(
             title: "Close Popover",
             action: #selector(closePopoverCommand),
@@ -160,11 +169,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return suppressKeyUp(for: event)
         }
 
-        if modifiers.contains([.command, .shift]), event.keyCode == favoriteShortcutKeyCode {
-            appState.toggleFavoriteSelectedItem()
-            return suppressKeyUp(for: event)
-        }
-
         if !modifiers.isDisjoint(with: [.command, .option, .control]) {
             return event
         }
@@ -221,6 +225,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     }
 
     @objc
+    private func toggleFavoriteCommand() {
+        guard popover.isShown else {
+            return
+        }
+
+        appState.toggleFavoriteSelectedItem()
+    }
+
+    @objc
     func closePopoverCommandFromResponderChain() {
         closePopoverCommand()
     }
@@ -243,9 +256,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         if popover.isShown {
             popover.performClose(nil)
         } else {
+            NSApp.activate(ignoringOtherApps: true)
             button.isHighlighted = true
             appState.didOpenPopover()
             popover.show(relativeTo: button.bounds, of: button, preferredEdge: .minY)
+            DispatchQueue.main.async { [weak self] in
+                self?.popover.contentViewController?.view.window?.makeKey()
+            }
         }
     }
 
