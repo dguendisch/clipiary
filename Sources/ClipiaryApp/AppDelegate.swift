@@ -23,6 +23,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
         appState.start()
+        configureCommandMenu()
         configurePopover()
         configureHotKey()
         configureKeyMonitor()
@@ -47,6 +48,52 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         let isPaused = !appState.settings.isClipboardMonitoringEnabled && !appState.settings.isAutoSelectEnabled
         button.appearsDisabled = isPaused
         button.title = ""
+    }
+
+    private func configureCommandMenu() {
+        let mainMenu = NSMenu()
+        let appMenuItem = NSMenuItem()
+        let appMenu = NSMenu(title: "Clipiary")
+
+        let focusSearchItem = NSMenuItem(
+            title: "Focus Search",
+            action: #selector(focusSearchCommand),
+            keyEquivalent: "f"
+        )
+        focusSearchItem.keyEquivalentModifierMask = [.command]
+        focusSearchItem.target = self
+        appMenu.addItem(focusSearchItem)
+
+        let toggleFavoriteItem = NSMenuItem(
+            title: "Toggle Favorite",
+            action: #selector(toggleFavoriteCommand),
+            keyEquivalent: "f"
+        )
+        toggleFavoriteItem.keyEquivalentModifierMask = [.command, .shift]
+        toggleFavoriteItem.target = self
+        appMenu.addItem(toggleFavoriteItem)
+
+        let closePopoverItem = NSMenuItem(
+            title: "Close Popover",
+            action: #selector(closePopoverCommand),
+            keyEquivalent: "\u{1b}"
+        )
+        closePopoverItem.target = self
+        appMenu.addItem(closePopoverItem)
+
+        appMenu.addItem(.separator())
+
+        let quitItem = NSMenuItem(
+            title: "Quit Clipiary",
+            action: #selector(NSApplication.terminate(_:)),
+            keyEquivalent: "q"
+        )
+        quitItem.keyEquivalentModifierMask = [.command]
+        appMenu.addItem(quitItem)
+
+        appMenuItem.submenu = appMenu
+        mainMenu.addItem(appMenuItem)
+        NSApplication.shared.mainMenu = mainMenu
     }
 
     private func configurePopover() {
@@ -107,7 +154,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let normalizedCharacters = event.charactersIgnoringModifiers?.lowercased()
 
         if appState.isRecordingShortcut {
             switch event.keyCode {
@@ -116,18 +162,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             default:
                 appState.updateGlobalShortcut(from: event)
             }
-            return nil
-        }
-
-        if modifiers == .command,
-           normalizedCharacters == "f" {
-            appState.requestSearchFocus()
-            return nil
-        }
-
-        if modifiers.contains([.command, .shift]),
-           normalizedCharacters == "f" {
-            appState.toggleFavoriteSelectedItem()
             return nil
         }
 
@@ -154,9 +188,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         case 51:
             appState.deleteSelectedItem()
             return nil
-        case 53:
-            popover.performClose(nil)
-            return nil
         default:
             return event
         }
@@ -166,23 +197,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         guard popover.isShown, event.type == .keyUp else {
             return false
         }
-
-        let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
-        let normalizedCharacters = event.charactersIgnoringModifiers?.lowercased()
-
-        if event.keyCode == 53 {
-            return true
-        }
-
-        if modifiers == .command, normalizedCharacters == "f" {
-            return true
-        }
-
-        if modifiers.contains([.command, .shift]), normalizedCharacters == "f" {
-            return true
-        }
-
         return false
+    }
+
+    @objc
+    private func focusSearchCommand() {
+        if !popover.isShown {
+            togglePopover()
+        }
+
+        appState.requestSearchFocus()
+    }
+
+    @objc
+    private func toggleFavoriteCommand() {
+        guard popover.isShown else {
+            return
+        }
+
+        appState.toggleFavoriteSelectedItem()
+    }
+
+    @objc
+    private func closePopoverCommand() {
+        guard popover.isShown else {
+            return
+        }
+
+        popover.performClose(nil)
     }
 
     @objc
