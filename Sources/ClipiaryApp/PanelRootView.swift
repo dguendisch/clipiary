@@ -59,9 +59,7 @@ struct PanelRootView: View {
                     .foregroundStyle(.secondary)
             }
 
-            if appState.selectedTab == .history || !appState.favoriteItems.isEmpty {
-                searchField
-            }
+            searchField
 
             ScrollViewReader { proxy in
                 ScrollView {
