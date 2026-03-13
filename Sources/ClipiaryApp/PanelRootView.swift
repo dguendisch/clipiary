@@ -6,7 +6,7 @@ struct PanelRootView: View {
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
     @State private var settingsExpanded = false
-    @State private var keyboardHelpExpanded = false
+    @State private var shortcutsHelpPresented = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -98,23 +98,39 @@ struct PanelRootView: View {
 
     private var settingsSection: some View {
         VStack(alignment: .leading, spacing: settingsExpanded ? 10 : 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.14)) {
-                    settingsExpanded.toggle()
+            HStack(spacing: 8) {
+                Button {
+                    withAnimation(.easeInOut(duration: 0.14)) {
+                        settingsExpanded.toggle()
+                    }
+                } label: {
+                    HStack(spacing: 10) {
+                        Text("Settings")
+                            .font(.system(size: 12, weight: .semibold))
+                        Spacer()
+                        Image(systemName: settingsExpanded ? "chevron.down" : "chevron.right")
+                            .font(.system(size: 10, weight: .bold))
+                            .foregroundStyle(.secondary)
+                    }
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .contentShape(Rectangle())
                 }
-            } label: {
-                HStack(spacing: 10) {
-                    Text("Settings")
-                        .font(.system(size: 12, weight: .semibold))
-                    Spacer()
-                    Image(systemName: settingsExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
+                .buttonStyle(.plain)
+
+                Button {
+                    shortcutsHelpPresented.toggle()
+                } label: {
+                    Image(systemName: "questionmark.circle")
+                        .font(.system(size: 13, weight: .semibold))
                         .foregroundStyle(.secondary)
+                        .frame(width: 18, height: 18)
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
+                .buttonStyle(.plain)
+                .help("Keyboard shortcuts")
+                .popover(isPresented: $shortcutsHelpPresented, attachmentAnchor: .rect(.bounds), arrowEdge: .top) {
+                    shortcutsHelpPopover
+                }
             }
-            .buttonStyle(.plain)
 
             if settingsExpanded {
                 VStack(alignment: .leading, spacing: 10) {
@@ -174,8 +190,6 @@ struct PanelRootView: View {
                             .font(.system(size: 11, weight: .medium))
                         }
                     }
-
-                    keyboardShortcutsSection
                 }
                 .transition(.opacity)
             }
@@ -373,44 +387,24 @@ struct PanelRootView: View {
             .fill(rowFill(for: item))
     }
 
-    private var keyboardShortcutsSection: some View {
-        VStack(alignment: .leading, spacing: keyboardHelpExpanded ? 10 : 0) {
-            Button {
-                withAnimation(.easeInOut(duration: 0.14)) {
-                    keyboardHelpExpanded.toggle()
-                }
-            } label: {
-                HStack(spacing: 10) {
-                    Text("Keyboard")
-                        .font(.system(size: 12, weight: .semibold))
-                    Spacer()
-                    Text("8 shortcuts")
-                        .font(.system(size: 11, weight: .medium))
-                        .foregroundStyle(.secondary)
-                    Image(systemName: keyboardHelpExpanded ? "chevron.down" : "chevron.right")
-                        .font(.system(size: 10, weight: .bold))
-                        .foregroundStyle(.secondary)
-                }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .contentShape(Rectangle())
-            }
-            .buttonStyle(.plain)
+    private var shortcutsHelpPopover: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("Keyboard Shortcuts")
+                .font(.system(size: 13, weight: .semibold))
 
-            if keyboardHelpExpanded {
-                VStack(spacing: 6) {
-                    shortcutRow("Open Clipiary", appState.settings.globalShortcut.displayString)
-                    shortcutRow("Focus search", "Cmd F")
-                    shortcutRow("Favorite or unfavorite", "Cmd D")
-                    shortcutRow("Move selection", "Up / Down")
-                    shortcutRow("Switch tabs", "Left / Right")
-                    shortcutRow("Restore selected item", "Return")
-                    shortcutRow("Delete selected item", "Delete")
-                    shortcutRow("Close popover", "Esc")
-                }
-                .transition(.opacity)
+            VStack(spacing: 6) {
+                shortcutRow("Open Clipiary", appState.settings.globalShortcut.displayString)
+                shortcutRow("Focus search", "Cmd F")
+                shortcutRow("Favorite or unfavorite", "Cmd D")
+                shortcutRow("Move selection", "Up / Down")
+                shortcutRow("Switch tabs", "Left / Right")
+                shortcutRow("Restore selected item", "Return")
+                shortcutRow("Delete selected item", "Delete")
+                shortcutRow("Close popover", "Esc")
             }
         }
-        .padding(.top, 2)
+        .padding(12)
+        .frame(width: 260)
     }
 
     private var panelBackground: some View {
