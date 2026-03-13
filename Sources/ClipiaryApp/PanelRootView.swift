@@ -417,7 +417,9 @@ struct PanelRootView: View {
                 RoundedRectangle(cornerRadius: 8, style: .continuous)
                     .fill(isSelected ? panelFill : Color.clear)
             )
+            .contentShape(Rectangle())
         }
+        .frame(maxWidth: .infinity)
         .buttonStyle(.plain)
         .foregroundStyle(isSelected ? .primary : .secondary)
     }
