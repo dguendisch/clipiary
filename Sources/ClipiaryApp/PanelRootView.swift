@@ -96,80 +96,92 @@ struct PanelRootView: View {
     }
 
     private var settingsSection: some View {
-        DisclosureGroup(isExpanded: $settingsExpanded) {
-            VStack(alignment: .leading, spacing: 10) {
-                if !appState.permissionManager.isTrusted {
-                    Button("Grant Accessibility Access") {
-                        appState.refreshAutoSelectPermissions()
-                    }
-                    .buttonStyle(.plain)
-                    .font(.system(size: 11, weight: .medium))
+        VStack(alignment: .leading, spacing: settingsExpanded ? 10 : 0) {
+            Button {
+                withAnimation(.easeInOut(duration: 0.14)) {
+                    settingsExpanded.toggle()
                 }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Monitor normal copy events", isOn: Binding(
-                        get: { appState.settings.isClipboardMonitoringEnabled },
-                        set: { appState.settings.isClipboardMonitoringEnabled = $0 }
-                    ))
-                    Toggle("Autoselect highlighted text", isOn: Binding(
-                        get: { appState.settings.isAutoSelectEnabled },
-                        set: { appState.settings.isAutoSelectEnabled = $0 }
-                    ))
-                }
-                .toggleStyle(.checkbox)
-                .font(.system(size: 12))
-
-                HStack(spacing: 12) {
-                    settingMetric(
-                        title: "Minimum selection",
-                        value: "\(appState.settings.minimumSelectionLength)"
-                    ) {
-                        Stepper("", value: Binding(
-                            get: { appState.settings.minimumSelectionLength },
-                            set: { appState.settings.minimumSelectionLength = max(1, $0) }
-                        ), in: 1...10)
-                        .labelsHidden()
+            } label: {
+                HStack(spacing: 10) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("Settings")
+                            .font(.system(size: 12, weight: .semibold))
+                        Text(settingsSummary)
+                            .font(.system(size: 11, weight: .medium))
+                            .foregroundStyle(.secondary)
                     }
-                    settingMetric(
-                        title: "Cooldown",
-                        value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
-                    ) {
-                        Stepper("", value: Binding(
-                            get: { appState.settings.autoSelectCooldownMilliseconds },
-                            set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
-                        ), in: 100...2000, step: 50)
-                        .labelsHidden()
-                    }
-                }
-
-                HStack(spacing: 12) {
-                    settingMetric(
-                        title: "Global shortcut",
-                        value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
-                    ) {
-                        Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
-                            appState.isRecordingShortcut.toggle()
-                        }
-                        .buttonStyle(.borderless)
-                        .font(.system(size: 11, weight: .medium))
-                    }
-                }
-            }
-            .padding(.top, 10)
-        } label: {
-            HStack(spacing: 10) {
-                VStack(alignment: .leading, spacing: 2) {
-                    Text("Settings")
-                        .font(.system(size: 12, weight: .semibold))
-                    Text(settingsSummary)
-                        .font(.system(size: 11, weight: .medium))
+                    Spacer()
+                    Image(systemName: settingsExpanded ? "chevron.down" : "chevron.right")
+                        .font(.system(size: 10, weight: .bold))
                         .foregroundStyle(.secondary)
                 }
-                Spacer()
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
             }
-            .contentShape(Rectangle())
+            .buttonStyle(.plain)
+
+            if settingsExpanded {
+                VStack(alignment: .leading, spacing: 10) {
+                    if !appState.permissionManager.isTrusted {
+                        Button("Grant Accessibility Access") {
+                            appState.refreshAutoSelectPermissions()
+                        }
+                        .buttonStyle(.plain)
+                        .font(.system(size: 11, weight: .medium))
+                    }
+
+                    VStack(alignment: .leading, spacing: 8) {
+                        Toggle("Monitor normal copy events", isOn: Binding(
+                            get: { appState.settings.isClipboardMonitoringEnabled },
+                            set: { appState.settings.isClipboardMonitoringEnabled = $0 }
+                        ))
+                        Toggle("Autoselect highlighted text", isOn: Binding(
+                            get: { appState.settings.isAutoSelectEnabled },
+                            set: { appState.settings.isAutoSelectEnabled = $0 }
+                        ))
+                    }
+                    .toggleStyle(.checkbox)
+                    .font(.system(size: 12))
+
+                    HStack(spacing: 12) {
+                        settingMetric(
+                            title: "Minimum selection",
+                            value: "\(appState.settings.minimumSelectionLength)"
+                        ) {
+                            Stepper("", value: Binding(
+                                get: { appState.settings.minimumSelectionLength },
+                                set: { appState.settings.minimumSelectionLength = max(1, $0) }
+                            ), in: 1...10)
+                            .labelsHidden()
+                        }
+                        settingMetric(
+                            title: "Cooldown",
+                            value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
+                        ) {
+                            Stepper("", value: Binding(
+                                get: { appState.settings.autoSelectCooldownMilliseconds },
+                                set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
+                            ), in: 100...2000, step: 50)
+                            .labelsHidden()
+                        }
+                    }
+
+                    HStack(spacing: 12) {
+                        settingMetric(
+                            title: "Global shortcut",
+                            value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
+                        ) {
+                            Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
+                                appState.isRecordingShortcut.toggle()
+                            }
+                            .buttonStyle(.borderless)
+                            .font(.system(size: 11, weight: .medium))
+                        }
+                    }
+                }
+                .transition(.opacity.combined(with: .move(edge: .top)))
+            }
         }
-        .disclosureGroupStyle(.automatic)
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
