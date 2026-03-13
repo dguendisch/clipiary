@@ -1,14 +1,11 @@
-#!/bin/zsh
+#!/bin/bash
 
 set -euo pipefail
 
-ROOT_DIR="${0:A:h:h}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 APP_NAME="Clipiary"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 WATCH_INTERVAL="${WATCH_INTERVAL:-1}"
-TMP_HOME="$ROOT_DIR/.tmp-home"
-MODULE_CACHE="$ROOT_DIR/.build/module-cache"
-CLANG_CACHE="$ROOT_DIR/.build/clang-module-cache"
 
 watch_paths=(
   "$ROOT_DIR/Package.swift"
@@ -16,18 +13,13 @@ watch_paths=(
   "$ROOT_DIR/scripts"
 )
 
-export HOME="$TMP_HOME"
-export SWIFTPM_MODULECACHE_OVERRIDE="$MODULE_CACHE"
-export CLANG_MODULE_CACHE_PATH="$CLANG_CACHE"
-
-mkdir -p "$TMP_HOME" "$MODULE_CACHE" "$CLANG_CACHE"
-
 build_and_restart() {
   echo "==> Building Clipiary"
   "$ROOT_DIR/scripts/build_app.sh"
 
   echo "==> Restarting Clipiary"
   pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  sleep 0.2
   open "$APP_BUNDLE"
 }
 

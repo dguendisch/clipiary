@@ -1,8 +1,8 @@
-#!/bin/zsh
+#!/bin/bash
 
 set -euo pipefail
 
-ROOT_DIR="${0:A:h:h}"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 CONFIGURATION="${1:-debug}"
 APP_NAME="Clipiary"
 BUNDLE_ID="dev.liamhess.clipiary"
@@ -16,12 +16,15 @@ CLANG_CACHE="$ROOT_DIR/.build/clang-module-cache"
 
 mkdir -p "$TMP_HOME" "$MODULE_CACHE" "$CLANG_CACHE" "$MACOS_DIR" "$RESOURCES_DIR"
 
-export HOME="$TMP_HOME"
-export SWIFTPM_MODULECACHE_OVERRIDE="$MODULE_CACHE"
-export CLANG_MODULE_CACHE_PATH="$CLANG_CACHE"
+swift_build() {
+  HOME="$TMP_HOME" \
+  SWIFTPM_MODULECACHE_OVERRIDE="$MODULE_CACHE" \
+  CLANG_MODULE_CACHE_PATH="$CLANG_CACHE" \
+  swift build "$@"
+}
 
-swift build --configuration "$CONFIGURATION"
-BIN_DIR="$(swift build --configuration "$CONFIGURATION" --show-bin-path)"
+swift_build --configuration "$CONFIGURATION"
+BIN_DIR="$(swift_build --configuration "$CONFIGURATION" --show-bin-path)"
 EXECUTABLE_PATH="$BIN_DIR/$APP_NAME"
 
 if [[ ! -x "$EXECUTABLE_PATH" ]]; then
