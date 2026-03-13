@@ -114,21 +114,33 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         hotKeyManager.onTrigger = { [weak self] in
             self?.togglePopover()
         }
-        registerHotKey()
         synchronizeHotKeyRegistration()
     }
 
-    private func registerHotKey() {
-        hotKeyManager.register(shortcut: appState.settings.globalShortcut)
+    private func synchronizeHotKeyRegistration() {
+        updateHotKeyRegistration()
+        observeHotKeyRegistrationDependencies()
     }
 
-    private func synchronizeHotKeyRegistration() {
+    private func updateHotKeyRegistration() {
+        if appState.isRecordingShortcut {
+            hotKeyManager.unregister()
+        } else {
+            hotKeyManager.register(shortcut: appState.settings.globalShortcut)
+        }
+    }
+
+    private func observeHotKeyRegistrationDependencies() {
         _ = withObservationTracking {
-            (appState.settings.globalHotKeyKeyCode, appState.settings.globalHotKeyModifiers)
+            (
+                appState.settings.globalHotKeyKeyCode,
+                appState.settings.globalHotKeyModifiers,
+                appState.isRecordingShortcut
+            )
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
-                self?.registerHotKey()
-                self?.synchronizeHotKeyRegistration()
+                self?.updateHotKeyRegistration()
+                self?.observeHotKeyRegistrationDependencies()
             }
         }
     }
