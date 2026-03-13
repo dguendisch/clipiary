@@ -27,6 +27,10 @@ struct PanelRootView: View {
         .onChange(of: appState.searchFocusRequestID) {
             searchFocused = true
         }
+        .onChange(of: appState.popoverOpenRequestID) {
+            settingsExpanded = false
+            shortcutsHelpPresented = false
+        }
     }
 
     private var header: some View {
@@ -171,7 +175,7 @@ struct PanelRootView: View {
                         }
                         settingMetric(
                             title: "Cooldown",
-                            value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
+                            value: nil
                         ) {
                             optionPicker(
                                 selection: Binding(
@@ -188,7 +192,7 @@ struct PanelRootView: View {
                     HStack(spacing: 12) {
                         settingMetric(
                             title: "History limit",
-                            value: "\(appState.settings.historyLimit) items"
+                            value: nil
                         ) {
                             optionPicker(
                                 selection: Binding(
@@ -514,14 +518,16 @@ struct PanelRootView: View {
         return .clear
     }
 
-    private func settingMetric<Control: View>(title: String, value: String, @ViewBuilder control: () -> Control) -> some View {
+    private func settingMetric<Control: View>(title: String, value: String?, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.system(size: 10, weight: .medium))
                     .foregroundStyle(.secondary)
-                Text(value)
-                    .font(.system(size: 12, weight: .semibold))
+                if let value {
+                    Text(value)
+                        .font(.system(size: 12, weight: .semibold))
+                }
             }
             Spacer()
             control()

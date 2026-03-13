@@ -23,6 +23,7 @@ final class AppState {
     private var selectedFavoritesTabItemID: HistoryItem.ID?
     var isRecordingShortcut = false
     private(set) var searchFocusRequestID = 0
+    private(set) var popoverOpenRequestID = 0
 
     @ObservationIgnored private let captureCoordinator: CaptureCoordinator
     @ObservationIgnored private let clipboardMonitor: ClipboardMonitor
@@ -59,7 +60,10 @@ final class AppState {
     }
 
     func didOpenPopover() {
+        selectedTab = .history
+        selectedHistoryTabItemID = nil
         ensureSelection()
+        popoverOpenRequestID &+= 1
         requestSearchFocus()
     }
 
