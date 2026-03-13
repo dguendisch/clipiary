@@ -11,7 +11,6 @@ final class AppSettings {
         static let autoSelectCooldownMilliseconds = "autoSelectCooldownMilliseconds"
         static let ignoredBundleIDs = "ignoredBundleIDs"
         static let historyLimit = "historyLimit"
-        static let showRecentItemInStatusBar = "showRecentItemInStatusBar"
     }
 
     private let defaults: UserDefaults
@@ -40,10 +39,6 @@ final class AppSettings {
         didSet { defaults.set(historyLimit, forKey: Keys.historyLimit) }
     }
 
-    var showRecentItemInStatusBar: Bool {
-        didSet { defaults.set(showRecentItemInStatusBar, forKey: Keys.showRecentItemInStatusBar) }
-    }
-
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -53,7 +48,6 @@ final class AppSettings {
             Keys.autoSelectCooldownMilliseconds: 350,
             Keys.ignoredBundleIDs: [],
             Keys.historyLimit: 100,
-            Keys.showRecentItemInStatusBar: false,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -62,7 +56,6 @@ final class AppSettings {
         autoSelectCooldownMilliseconds = defaults.integer(forKey: Keys.autoSelectCooldownMilliseconds)
         ignoredBundleIDs = defaults.stringArray(forKey: Keys.ignoredBundleIDs) ?? []
         historyLimit = defaults.integer(forKey: Keys.historyLimit)
-        showRecentItemInStatusBar = defaults.bool(forKey: Keys.showRecentItemInStatusBar)
     }
 
     func ignores(bundleID: String?) -> Bool {

@@ -41,12 +41,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
 
         let isPaused = !appState.settings.isClipboardMonitoringEnabled && !appState.settings.isAutoSelectEnabled
         button.appearsDisabled = isPaused
-
-        if appState.settings.showRecentItemInStatusBar, let text = appState.history.items.first?.displayText {
-            button.title = " " + text.prefix(18)
-        } else {
-            button.title = ""
-        }
+        button.title = ""
     }
 
     private func configurePopover() {

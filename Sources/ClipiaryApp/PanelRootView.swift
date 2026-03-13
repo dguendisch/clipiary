@@ -58,13 +58,6 @@ struct PanelRootView: View {
                     .font(.system(size: 12, weight: .medium))
                 }
 
-                Toggle("Show recent item in menu bar", isOn: Binding(
-                    get: { appState.settings.showRecentItemInStatusBar },
-                    set: { appState.settings.showRecentItemInStatusBar = $0 }
-                ))
-                .toggleStyle(.checkbox)
-                .font(.system(size: 12))
-
                 HStack(spacing: 12) {
                     Stepper("Min \(appState.settings.minimumSelectionLength)", value: Binding(
                         get: { appState.settings.minimumSelectionLength },
