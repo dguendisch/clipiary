@@ -36,8 +36,7 @@ snapshot() {
 
 watch_with_fswatch() {
   echo "==> Watching with fswatch"
-  fswatch -0 "${watch_paths[@]}" | while IFS= read -r -d '' _event; do
-    sleep 0.2
+  fswatch -o --latency 0.4 "${watch_paths[@]}" | while read -r _batch_count; do
     build_and_restart
   done
 }

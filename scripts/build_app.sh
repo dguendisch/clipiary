@@ -13,6 +13,7 @@ RESOURCES_DIR="$CONTENTS_DIR/Resources"
 TMP_HOME="$ROOT_DIR/.tmp-home"
 MODULE_CACHE="$ROOT_DIR/.build/module-cache"
 CLANG_CACHE="$ROOT_DIR/.build/clang-module-cache"
+CODESIGN_IDENTITY="${CLIPIARY_CODESIGN_IDENTITY:-}"
 
 mkdir -p "$TMP_HOME" "$MODULE_CACHE" "$CLANG_CACHE" "$MACOS_DIR" "$RESOURCES_DIR"
 
@@ -50,7 +51,14 @@ chmod +x "$MACOS_DIR/$APP_NAME"
 /usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "$CONTENTS_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :NSPrincipalClass string NSApplication" "$CONTENTS_DIR/Info.plist"
 
-codesign --force --deep --sign - "$APP_BUNDLE"
+if [[ -n "$CODESIGN_IDENTITY" ]]; then
+  codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+  echo "Signed app bundle with identity: $CODESIGN_IDENTITY"
+else
+  codesign --remove-signature "$APP_BUNDLE" 2>/dev/null || true
+  echo "Built app bundle without code signing."
+  echo "Tip: set CLIPIARY_CODESIGN_IDENTITY to a stable signing identity to preserve TCC permissions."
+fi
 
 echo "Built app bundle:"
 echo "$APP_BUNDLE"
