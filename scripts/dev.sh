@@ -8,6 +8,7 @@ APP_NAME="Clipiary"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 APP_EXECUTABLE="$APP_BUNDLE/Contents/MacOS/$APP_NAME"
 WATCH_INTERVAL="${WATCH_INTERVAL:-1}"
+APP_PID=""
 
 watch_paths=(
   "$ROOT_DIR/Package.swift"
@@ -20,9 +21,15 @@ build_and_restart() {
   "$ROOT_DIR/scripts/build_app.sh"
 
   echo "==> Restarting Clipiary"
-  pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  if [[ -n "$APP_PID" ]] && kill -0 "$APP_PID" >/dev/null 2>&1; then
+    kill "$APP_PID" >/dev/null 2>&1 || true
+    wait "$APP_PID" 2>/dev/null || true
+  else
+    pkill -x "$APP_NAME" >/dev/null 2>&1 || true
+  fi
   sleep 0.2
   "$APP_EXECUTABLE" >/tmp/clipiary-dev.log 2>&1 &
+  APP_PID=$!
 }
 
 snapshot() {
@@ -61,6 +68,11 @@ watch_with_polling() {
 
 cleanup() {
   echo
+  if [[ -n "$APP_PID" ]] && kill -0 "$APP_PID" >/dev/null 2>&1; then
+    echo "==> Stopping Clipiary"
+    kill "$APP_PID" >/dev/null 2>&1 || true
+    wait "$APP_PID" 2>/dev/null || true
+  fi
   echo "==> Stopping dev watcher"
 }
 
