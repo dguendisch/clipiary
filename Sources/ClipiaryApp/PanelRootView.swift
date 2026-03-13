@@ -65,7 +65,7 @@ struct PanelRootView: View {
 
             ScrollViewReader { proxy in
                 ScrollView {
-                    VStack(spacing: 12) {
+                    LazyVStack(spacing: 12) {
                         if appState.activeItems.isEmpty {
                             emptyState
                         } else {
@@ -283,7 +283,7 @@ struct PanelRootView: View {
                 .tracking(0.8)
                 .padding(.horizontal, 8)
 
-            VStack(spacing: 2) {
+            LazyVStack(spacing: 2) {
                 ForEach(items) { item in
                     row(for: item)
                 }
