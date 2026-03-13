@@ -30,7 +30,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationDidFinishLaunching(_ notification: Notification) {
         panel = FloatingPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 420, height: 540),
+            contentRect: NSRect(x: 0, y: 0, width: 364, height: 504),
             title: "Clipiary",
             statusBarButton: statusItem.button
         ) {

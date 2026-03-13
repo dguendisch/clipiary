@@ -49,10 +49,27 @@ final class CaptureCoordinator {
             return
         }
 
-        guard let text = snapshot.selectedText else {
+        if let text = snapshot.selectedText {
+            registerAutoSelect(text: text, snapshot: snapshot, writeToPasteboard: true)
             return
         }
 
+        if shouldTryAnkiFallback(for: snapshot), let text = attemptAnkiShortcutFallback() {
+            registerAutoSelect(text: text, snapshot: snapshot, writeToPasteboard: false)
+        }
+    }
+
+    func restore(_ item: HistoryItem) {
+        let pasteboard = NSPasteboard.general
+        pasteboard.clearContents()
+        guard pasteboard.setString(item.text, forType: .string) else {
+            return
+        }
+
+        suppressNextClipboardChange = true
+    }
+
+    private func registerAutoSelect(text: String, snapshot: SelectionSnapshot, writeToPasteboard: Bool) {
         guard !settings.ignores(bundleID: snapshot.bundleID) else {
             return
         }
@@ -71,10 +88,12 @@ final class CaptureCoordinator {
             return
         }
 
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        guard pasteboard.setString(text, forType: .string) else {
-            return
+        if writeToPasteboard {
+            let pasteboard = NSPasteboard.general
+            pasteboard.clearContents()
+            guard pasteboard.setString(text, forType: .string) else {
+                return
+            }
         }
 
         suppressNextClipboardChange = true
@@ -89,13 +108,68 @@ final class CaptureCoordinator {
         lastAutoSelectAt = .now
     }
 
-    func restore(_ item: HistoryItem) {
-        let pasteboard = NSPasteboard.general
-        pasteboard.clearContents()
-        guard pasteboard.setString(item.text, forType: .string) else {
-            return
+    private func shouldTryAnkiFallback(for snapshot: SelectionSnapshot) -> Bool {
+        guard let bundleID = snapshot.bundleID else {
+            return false
         }
 
-        suppressNextClipboardChange = true
+        guard bundleID.hasPrefix("net.ankiweb.") || snapshot.appName == "Anki" else {
+            return false
+        }
+
+        if snapshot.failureReason == "Secure text field" || snapshot.failureReason == "No frontmost app" {
+            return false
+        }
+
+        let cooldown = Double(settings.autoSelectCooldownMilliseconds) / 1_000
+        return Date().timeIntervalSince(lastAutoSelectAt) >= cooldown
+    }
+
+    private func attemptAnkiShortcutFallback(timeout: TimeInterval = 0.4) -> String? {
+        let pasteboard = NSPasteboard.general
+        let previousChangeCount = pasteboard.changeCount
+
+        guard postCommandC() else {
+            return nil
+        }
+
+        let deadline = Date().addingTimeInterval(timeout)
+        repeat {
+            if pasteboard.changeCount != previousChangeCount,
+               let text = pasteboard.string(forType: .string) {
+                return text
+            }
+
+            RunLoop.current.run(mode: .default, before: Date().addingTimeInterval(0.01))
+        } while Date() < deadline
+
+        return nil
+    }
+
+    private func postCommandC() -> Bool {
+        guard let source = CGEventSource(stateID: .combinedSessionState) else {
+            return false
+        }
+
+        let commandKey: CGKeyCode = 55
+        let cKey: CGKeyCode = 8
+
+        guard
+            let commandDown = CGEvent(keyboardEventSource: source, virtualKey: commandKey, keyDown: true),
+            let cDown = CGEvent(keyboardEventSource: source, virtualKey: cKey, keyDown: true),
+            let cUp = CGEvent(keyboardEventSource: source, virtualKey: cKey, keyDown: false),
+            let commandUp = CGEvent(keyboardEventSource: source, virtualKey: commandKey, keyDown: false)
+        else {
+            return false
+        }
+
+        cDown.flags = .maskCommand
+        cUp.flags = .maskCommand
+
+        commandDown.post(tap: .cghidEventTap)
+        cDown.post(tap: .cghidEventTap)
+        cUp.post(tap: .cghidEventTap)
+        commandUp.post(tap: .cghidEventTap)
+        return true
     }
 }
