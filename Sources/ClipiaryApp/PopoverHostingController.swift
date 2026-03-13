@@ -52,6 +52,19 @@ final class PopoverHostingView: NSHostingView<AnyView> {
             return super.performKeyEquivalent(with: event)
         }
 
+        if appState.isRecordingShortcut {
+            if event.keyCode == 53 {
+                appState.isRecordingShortcut = false
+                return true
+            }
+
+            if let shortcut = GlobalShortcut(event: event) {
+                appState.settings.updateGlobalShortcut(shortcut)
+                appState.isRecordingShortcut = false
+                return true
+            }
+        }
+
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
         let normalizedCharacters = event.charactersIgnoringModifiers?.lowercased()
 
