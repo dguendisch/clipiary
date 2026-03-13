@@ -5,6 +5,7 @@ struct PanelRootView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
+    @State private var settingsExpanded = false
 
     var body: some View {
         VStack(spacing: 12) {
@@ -95,11 +96,8 @@ struct PanelRootView: View {
     }
 
     private var settingsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack {
-                Text("Capture")
-                    .font(.system(size: 12, weight: .semibold))
-                Spacer()
+        DisclosureGroup(isExpanded: $settingsExpanded) {
+            VStack(alignment: .leading, spacing: 10) {
                 if !appState.permissionManager.isTrusted {
                     Button("Grant Accessibility Access") {
                         appState.refreshAutoSelectPermissions()
@@ -107,57 +105,74 @@ struct PanelRootView: View {
                     .buttonStyle(.plain)
                     .font(.system(size: 11, weight: .medium))
                 }
-            }
 
-            VStack(alignment: .leading, spacing: 8) {
-                Toggle("Monitor normal copy events", isOn: Binding(
-                    get: { appState.settings.isClipboardMonitoringEnabled },
-                    set: { appState.settings.isClipboardMonitoringEnabled = $0 }
-                ))
-                Toggle("Autoselect highlighted text", isOn: Binding(
-                    get: { appState.settings.isAutoSelectEnabled },
-                    set: { appState.settings.isAutoSelectEnabled = $0 }
-                ))
-            }
-            .toggleStyle(.checkbox)
-            .font(.system(size: 12))
-
-            HStack(spacing: 12) {
-                settingMetric(
-                    title: "Minimum selection",
-                    value: "\(appState.settings.minimumSelectionLength)"
-                ) {
-                    Stepper("", value: Binding(
-                        get: { appState.settings.minimumSelectionLength },
-                        set: { appState.settings.minimumSelectionLength = max(1, $0) }
-                    ), in: 1...10)
-                    .labelsHidden()
+                VStack(alignment: .leading, spacing: 8) {
+                    Toggle("Monitor normal copy events", isOn: Binding(
+                        get: { appState.settings.isClipboardMonitoringEnabled },
+                        set: { appState.settings.isClipboardMonitoringEnabled = $0 }
+                    ))
+                    Toggle("Autoselect highlighted text", isOn: Binding(
+                        get: { appState.settings.isAutoSelectEnabled },
+                        set: { appState.settings.isAutoSelectEnabled = $0 }
+                    ))
                 }
-                settingMetric(
-                    title: "Cooldown",
-                    value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
-                ) {
-                    Stepper("", value: Binding(
-                        get: { appState.settings.autoSelectCooldownMilliseconds },
-                        set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
-                    ), in: 100...2000, step: 50)
-                    .labelsHidden()
-                }
-            }
+                .toggleStyle(.checkbox)
+                .font(.system(size: 12))
 
-            HStack(spacing: 12) {
-                settingMetric(
-                    title: "Global shortcut",
-                    value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
-                ) {
-                    Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
-                        appState.isRecordingShortcut.toggle()
+                HStack(spacing: 12) {
+                    settingMetric(
+                        title: "Minimum selection",
+                        value: "\(appState.settings.minimumSelectionLength)"
+                    ) {
+                        Stepper("", value: Binding(
+                            get: { appState.settings.minimumSelectionLength },
+                            set: { appState.settings.minimumSelectionLength = max(1, $0) }
+                        ), in: 1...10)
+                        .labelsHidden()
                     }
-                    .buttonStyle(.borderless)
-                    .font(.system(size: 11, weight: .medium))
+                    settingMetric(
+                        title: "Cooldown",
+                        value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
+                    ) {
+                        Stepper("", value: Binding(
+                            get: { appState.settings.autoSelectCooldownMilliseconds },
+                            set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
+                        ), in: 100...2000, step: 50)
+                        .labelsHidden()
+                    }
+                }
+
+                HStack(spacing: 12) {
+                    settingMetric(
+                        title: "Global shortcut",
+                        value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
+                    ) {
+                        Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
+                            appState.isRecordingShortcut.toggle()
+                        }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: 11, weight: .medium))
+                    }
                 }
             }
+            .padding(.top, 10)
+        } label: {
+            HStack(spacing: 10) {
+                VStack(alignment: .leading, spacing: 2) {
+                    Text("Settings")
+                        .font(.system(size: 12, weight: .semibold))
+                    Text(settingsSummary)
+                        .font(.system(size: 11, weight: .medium))
+                        .foregroundStyle(.secondary)
+                }
+                Spacer()
+                Image(systemName: settingsExpanded ? "chevron.down" : "chevron.right")
+                    .font(.system(size: 10, weight: .bold))
+                    .foregroundStyle(.secondary)
+            }
+            .contentShape(Rectangle())
         }
+        .disclosureGroupStyle(.automatic)
         .padding(10)
         .background(
             RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -349,6 +364,23 @@ struct PanelRootView: View {
     private func rowBackground(for item: HistoryItem) -> some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
             .fill(rowFill(for: item))
+    }
+
+    private var settingsSummary: String {
+        let captureMode = {
+            if appState.settings.isClipboardMonitoringEnabled && appState.settings.isAutoSelectEnabled {
+                return "Clipboard + autoselect"
+            }
+            if appState.settings.isClipboardMonitoringEnabled {
+                return "Clipboard only"
+            }
+            if appState.settings.isAutoSelectEnabled {
+                return "Autoselect only"
+            }
+            return "Capture paused"
+        }()
+
+        return "\(captureMode), shortcut \(appState.settings.globalShortcut.displayString)"
     }
 
     private var panelBackground: some View {
