@@ -3,127 +3,171 @@ import SwiftUI
 
 struct PanelRootView: View {
     @Environment(AppState.self) private var appState
+    @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
-    @State private var showHistory = true
     @State private var searchQuery = ""
 
     var body: some View {
-        VStack(spacing: 0) {
+        VStack(spacing: 12) {
             header
-            Divider()
-                .overlay(Color.black.opacity(0.04))
-            controls
+            historySection
+            settingsSection
             footer
         }
-        .frame(width: 360, height: 460)
+        .padding(12)
+        .frame(width: 376, height: 520)
         .background(panelBackground)
+        .task {
+            searchFocused = true
+        }
     }
 
     private var header: some View {
-        VStack(spacing: 0) {
+        VStack(alignment: .leading, spacing: 6) {
             HStack(alignment: .center, spacing: 8) {
                 Text("Clipiary")
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
+                Text(statusSummary)
+                    .font(.system(size: 10, weight: .semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+                    .background(
+                        Capsule(style: .continuous)
+                            .fill(panelFill)
+                    )
             }
-        }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 12)
-    }
-
-    private var controls: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 12) {
-                if !appState.permissionManager.isTrusted {
-                    Button("Grant Accessibility Access") {
-                        appState.refreshAutoSelectPermissions()
-                    }
-                    .buttonStyle(.borderless)
-                    .font(.system(size: 12, weight: .medium))
-                }
-
-                VStack(alignment: .leading, spacing: 8) {
-                    Toggle("Monitor normal copy events", isOn: Binding(
-                        get: { appState.settings.isClipboardMonitoringEnabled },
-                        set: { appState.settings.isClipboardMonitoringEnabled = $0 }
-                    ))
-                    Toggle("Autoselect highlighted text", isOn: Binding(
-                        get: { appState.settings.isAutoSelectEnabled },
-                        set: { appState.settings.isAutoSelectEnabled = $0 }
-                    ))
-                }
-                .toggleStyle(.checkbox)
-                .font(.system(size: 12))
-
-                HStack(spacing: 12) {
-                    Stepper("Min \(appState.settings.minimumSelectionLength)", value: Binding(
-                        get: { appState.settings.minimumSelectionLength },
-                        set: { appState.settings.minimumSelectionLength = max(1, $0) }
-                    ), in: 1...10)
-                    Stepper("\(appState.settings.autoSelectCooldownMilliseconds) ms", value: Binding(
-                        get: { appState.settings.autoSelectCooldownMilliseconds },
-                        set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
-                    ), in: 100...2000, step: 50)
-                }
+            Text("Clipboard history first. Capture settings stay secondary.")
                 .font(.system(size: 11))
-
-                historySection
-            }
-            .padding(12)
+                .foregroundStyle(.secondary)
         }
+        .padding(.horizontal, 2)
+        .padding(.top, 2)
     }
 
     private var historySection: some View {
-        DisclosureGroup(isExpanded: $showHistory) {
-            VStack(spacing: 8) {
-                searchField
-                if filteredHistoryItems.isEmpty {
-                    emptyState
-                } else {
-                    LazyVStack(spacing: 0) {
-                        ForEach(filteredHistoryItems.prefix(40)) { item in
-                            row(for: item)
-                        }
-                    }
-                }
-            }
-            .padding(.top, 8)
-        } label: {
+        VStack(alignment: .leading, spacing: 10) {
             HStack {
                 Text("History")
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
+                if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                    Button("Clear Search") {
+                        searchQuery = ""
+                        searchFocused = true
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                    .foregroundStyle(.secondary)
+                }
                 Text("\(filteredHistoryItems.count)")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
+
+            searchField
+
+            ScrollView {
+                VStack(spacing: 12) {
+                    if pinnedItems.isEmpty && recentItems.isEmpty {
+                        emptyState
+                    } else {
+                        if !pinnedItems.isEmpty {
+                            historyGroup(title: "Pinned", items: pinnedItems)
+                        }
+                        if !recentItems.isEmpty {
+                            historyGroup(title: pinnedItems.isEmpty ? "Recent" : "Recent Copies", items: recentItems)
+                        }
+                    }
+                }
+                .padding(10)
+            }
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    .fill(panelFill)
+            )
         }
-        .tint(.primary)
+    }
+
+    private var settingsSection: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            HStack {
+                Text("Capture")
+                    .font(.system(size: 12, weight: .semibold))
+                Spacer()
+                if !appState.permissionManager.isTrusted {
+                    Button("Grant Accessibility Access") {
+                        appState.refreshAutoSelectPermissions()
+                    }
+                    .buttonStyle(.plain)
+                    .font(.system(size: 11, weight: .medium))
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 8) {
+                Toggle("Monitor normal copy events", isOn: Binding(
+                    get: { appState.settings.isClipboardMonitoringEnabled },
+                    set: { appState.settings.isClipboardMonitoringEnabled = $0 }
+                ))
+                Toggle("Autoselect highlighted text", isOn: Binding(
+                    get: { appState.settings.isAutoSelectEnabled },
+                    set: { appState.settings.isAutoSelectEnabled = $0 }
+                ))
+            }
+            .toggleStyle(.checkbox)
+            .font(.system(size: 12))
+
+            HStack(spacing: 12) {
+                settingMetric(
+                    title: "Minimum selection",
+                    value: "\(appState.settings.minimumSelectionLength)"
+                ) {
+                    Stepper("", value: Binding(
+                        get: { appState.settings.minimumSelectionLength },
+                        set: { appState.settings.minimumSelectionLength = max(1, $0) }
+                    ), in: 1...10)
+                    .labelsHidden()
+                }
+                settingMetric(
+                    title: "Cooldown",
+                    value: "\(appState.settings.autoSelectCooldownMilliseconds) ms"
+                ) {
+                    Stepper("", value: Binding(
+                        get: { appState.settings.autoSelectCooldownMilliseconds },
+                        set: { appState.settings.autoSelectCooldownMilliseconds = min(max(100, $0), 2000) }
+                    ), in: 100...2000, step: 50)
+                    .labelsHidden()
+                }
+            }
+        }
+        .padding(10)
+        .background(
+            RoundedRectangle(cornerRadius: 12, style: .continuous)
+                .fill(panelFill)
+        )
     }
 
     private var footer: some View {
-        VStack(spacing: 0) {
-            Divider()
-                .overlay(Color.black.opacity(0.04))
-            HStack {
-                accessibilityStatus
-                Spacer()
-                Button("Clear") {
-                    appState.history.clearUnpinned()
-                }
-                Button("Quit") {
-                    NSApplication.shared.terminate(nil)
-                }
-                Spacer()
-                Text("\(appState.history.items.count) items")
-                    .foregroundStyle(.secondary)
-                    .font(.system(size: 11, weight: .medium))
+        HStack {
+            accessibilityStatus
+            Spacer()
+            Button("Clear") {
+                appState.history.clearUnpinned()
             }
-            .buttonStyle(.plain)
-            .font(.system(size: 11, weight: .medium))
-            .padding(.horizontal, 12)
-            .padding(.vertical, 10)
+            Button("Quit") {
+                NSApplication.shared.terminate(nil)
+            }
+            HStack {
+                Text("\(appState.history.items.count)")
+                Text("items")
+            }
+            .foregroundStyle(.secondary)
         }
+        .buttonStyle(.plain)
+        .font(.system(size: 11, weight: .medium))
+        .padding(.horizontal, 2)
     }
 
     private var accessibilityStatus: some View {
@@ -150,18 +194,42 @@ struct PanelRootView: View {
             Image(systemName: "magnifyingglass")
                 .font(.system(size: 12, weight: .medium))
                 .foregroundStyle(.secondary)
-            TextField("Search clipboard history", text: Binding(
-                get: { appState.history.searchQuery },
-                set: { appState.history.searchQuery = $0 }
-            ))
+            TextField("Search clipboard history", text: $searchQuery)
             .textFieldStyle(.plain)
+            .focused($searchFocused)
+            if !searchQuery.isEmpty {
+                Button {
+                    searchQuery = ""
+                    searchFocused = true
+                } label: {
+                    Image(systemName: "xmark.circle.fill")
+                        .foregroundStyle(.secondary)
+                }
+                .buttonStyle(.plain)
+            }
         }
         .padding(.horizontal, 10)
-        .frame(height: 28)
+        .frame(height: 30)
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
-                .fill(buttonFill)
+                .fill(panelFill)
         )
+    }
+
+    private func historyGroup(title: String, items: [HistoryItem]) -> some View {
+        VStack(alignment: .leading, spacing: 6) {
+            Text(title.uppercased())
+                .font(.system(size: 10, weight: .bold))
+                .foregroundStyle(.secondary)
+                .tracking(0.8)
+                .padding(.horizontal, 8)
+
+            VStack(spacing: 2) {
+                ForEach(items) { item in
+                    row(for: item)
+                }
+            }
+        }
     }
 
     private func row(for item: HistoryItem) -> some View {
@@ -196,6 +264,7 @@ struct PanelRootView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(item.isPinned ? Color.accentColor : .secondary)
+                .opacity(hoveredItemID == item.id || item.isPinned ? 1 : 0.55)
 
                 Button {
                     appState.history.delete(item)
@@ -206,12 +275,13 @@ struct PanelRootView: View {
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(.secondary)
+                .opacity(hoveredItemID == item.id ? 1 : 0.45)
             }
 
             HStack(spacing: 6) {
                 Text(item.appName)
-                Text("·")
-                Text(item.createdAt, style: .time)
+                Text(item.source == .autoSelect ? "Selection" : "Clipboard")
+                Text(item.createdAt.formatted(date: .omitted, time: .shortened))
             }
             .font(.system(size: 10, weight: .medium))
             .foregroundStyle(.secondary)
@@ -229,7 +299,7 @@ struct PanelRootView: View {
 
     private var emptyState: some View {
         VStack(spacing: 8) {
-            Image(systemName: "paperclip")
+            Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
             Text("No clipboard history yet")
@@ -246,22 +316,41 @@ struct PanelRootView: View {
 
     private func rowBackground(for item: HistoryItem) -> some View {
         RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(hoveredItemID == item.id ? buttonFill : Color.clear)
-            .padding(.horizontal, 6)
-            .padding(.vertical, 2)
+            .fill(hoveredItemID == item.id ? hoverFill : Color.clear)
     }
 
     private var panelBackground: some View {
-        ZStack {
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .fill(.regularMaterial)
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
-                .strokeBorder(Color.black.opacity(0.08), lineWidth: 1)
+        RoundedRectangle(cornerRadius: 14, style: .continuous)
+            .fill(.regularMaterial)
+    }
+
+    private var panelFill: Color {
+        Color(nsColor: .controlBackgroundColor).opacity(0.85)
+    }
+
+    private var hoverFill: Color {
+        Color.accentColor.opacity(0.09)
+    }
+
+    private var statusSummary: String {
+        switch (appState.settings.isClipboardMonitoringEnabled, appState.settings.isAutoSelectEnabled) {
+        case (true, true):
+            return "Clipboard + Select"
+        case (true, false):
+            return "Clipboard Only"
+        case (false, true):
+            return "Select Only"
+        case (false, false):
+            return "Paused"
         }
     }
 
-    private var buttonFill: Color {
-        Color(nsColor: .controlBackgroundColor).opacity(0.85)
+    private var pinnedItems: [HistoryItem] {
+        filteredHistoryItems.filter(\.isPinned)
+    }
+
+    private var recentItems: [HistoryItem] {
+        filteredHistoryItems.filter { !$0.isPinned }
     }
 
     private var filteredHistoryItems: [HistoryItem] {
@@ -275,5 +364,25 @@ struct PanelRootView: View {
             item.appName.localizedCaseInsensitiveContains(query) ||
             (item.bundleID?.localizedCaseInsensitiveContains(query) ?? false)
         }
+    }
+
+    private func settingMetric<Control: View>(title: String, value: String, @ViewBuilder control: () -> Control) -> some View {
+        HStack(spacing: 8) {
+            VStack(alignment: .leading, spacing: 2) {
+                Text(title)
+                    .font(.system(size: 10, weight: .medium))
+                    .foregroundStyle(.secondary)
+                Text(value)
+                    .font(.system(size: 12, weight: .semibold))
+            }
+            Spacer()
+            control()
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.001))
+        )
     }
 }

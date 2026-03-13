@@ -48,7 +48,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         popover.behavior = .transient
         popover.animates = true
         popover.delegate = self
-        popover.contentSize = NSSize(width: 360, height: 460)
+        popover.contentSize = NSSize(width: 376, height: 520)
         popover.contentViewController = NSHostingController(
             rootView: PanelRootView()
                 .environment(appState)
