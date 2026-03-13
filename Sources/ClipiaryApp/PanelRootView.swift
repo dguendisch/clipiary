@@ -2,9 +2,17 @@ import AppKit
 import SwiftUI
 
 struct PanelRootView: View {
+    private enum Tab: String, CaseIterable, Identifiable {
+        case history = "History"
+        case favorites = "Favorites"
+
+        var id: Self { self }
+    }
+
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
+    @State private var selectedTab: Tab = .history
     @State private var searchQuery = ""
 
     var body: some View {
@@ -41,6 +49,8 @@ struct PanelRootView: View {
             Text("Clipboard history first. Capture settings stay secondary.")
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
+
+            tabBar
         }
         .padding(.horizontal, 2)
         .padding(.top, 2)
@@ -49,7 +59,7 @@ struct PanelRootView: View {
     private var historySection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HStack {
-                Text("History")
+                Text(selectedTab.rawValue)
                     .font(.system(size: 12, weight: .semibold))
                 Spacer()
                 if !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
@@ -61,23 +71,24 @@ struct PanelRootView: View {
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
                 }
-                Text("\(filteredHistoryItems.count)")
+                Text("\(activeItems.count)")
                     .font(.system(size: 11, weight: .medium))
                     .foregroundStyle(.secondary)
             }
 
-            searchField
+            if selectedTab == .history || !favoriteItems.isEmpty {
+                searchField
+            }
 
             ScrollView {
                 VStack(spacing: 12) {
-                    if pinnedItems.isEmpty && recentItems.isEmpty {
+                    if activeItems.isEmpty {
                         emptyState
                     } else {
-                        if !pinnedItems.isEmpty {
-                            historyGroup(title: "Pinned", items: pinnedItems)
-                        }
-                        if !recentItems.isEmpty {
-                            historyGroup(title: pinnedItems.isEmpty ? "Recent" : "Recent Copies", items: recentItems)
+                        if selectedTab == .history {
+                            historyGroup(title: "Recent Copies", items: historyItems)
+                        } else {
+                            historyGroup(title: "Saved Favorites", items: favoriteItems)
                         }
                     }
                 }
@@ -153,7 +164,7 @@ struct PanelRootView: View {
         HStack {
             accessibilityStatus
             Spacer()
-            Button("Clear") {
+            Button("Clear History") {
                 appState.history.clearUnpinned()
             }
             Button("Quit") {
@@ -258,7 +269,7 @@ struct PanelRootView: View {
                 Button {
                     appState.history.togglePin(item)
                 } label: {
-                    Image(systemName: item.isPinned ? "pin.fill" : "pin")
+                    Image(systemName: item.isPinned ? "star.fill" : "star")
                         .font(.system(size: 11, weight: .medium))
                         .frame(width: 22, height: 22)
                 }
@@ -302,9 +313,9 @@ struct PanelRootView: View {
             Image(systemName: "doc.on.clipboard")
                 .font(.system(size: 18, weight: .medium))
                 .foregroundStyle(.secondary)
-            Text("No clipboard history yet")
+            Text(emptyTitle)
                 .font(.system(size: 13, weight: .medium))
-            Text("Copy something, or enable autoselect to capture highlighted text.")
+            Text(emptyMessage)
                 .font(.system(size: 11))
                 .foregroundStyle(.secondary)
                 .multilineTextAlignment(.center)
@@ -345,15 +356,19 @@ struct PanelRootView: View {
         }
     }
 
-    private var pinnedItems: [HistoryItem] {
-        filteredHistoryItems.filter(\.isPinned)
+    private var historyItems: [HistoryItem] {
+        filteredItemsForSelectedTab(tab: .history)
     }
 
-    private var recentItems: [HistoryItem] {
-        filteredHistoryItems.filter { !$0.isPinned }
+    private var favoriteItems: [HistoryItem] {
+        filteredItemsForSelectedTab(tab: .favorites)
     }
 
-    private var filteredHistoryItems: [HistoryItem] {
+    private var activeItems: [HistoryItem] {
+        selectedTab == .history ? historyItems : favoriteItems
+    }
+
+    private var filteredItems: [HistoryItem] {
         let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
         guard !query.isEmpty else {
             return appState.history.items
@@ -364,6 +379,72 @@ struct PanelRootView: View {
             item.appName.localizedCaseInsensitiveContains(query) ||
             (item.bundleID?.localizedCaseInsensitiveContains(query) ?? false)
         }
+    }
+
+    private func filteredItemsForSelectedTab(tab: Tab) -> [HistoryItem] {
+        switch tab {
+        case .history:
+            return filteredItems.filter { !$0.isPinned }
+        case .favorites:
+            return filteredItems.filter(\.isPinned)
+        }
+    }
+
+    private var emptyMessage: String {
+        switch selectedTab {
+        case .history:
+            return "Copy something, or enable autoselect to capture highlighted text."
+        case .favorites:
+            return "Mark important items as favorites so they stay separate from the stream."
+        }
+    }
+
+    private var emptyTitle: String {
+        switch selectedTab {
+        case .history:
+            return "No clipboard history yet"
+        case .favorites:
+            return "No favorites yet"
+        }
+    }
+
+    private var tabBar: some View {
+        HStack(spacing: 6) {
+            ForEach(Tab.allCases) { tab in
+                tabButton(for: tab)
+            }
+        }
+        .padding(4)
+        .background(
+            RoundedRectangle(cornerRadius: 10, style: .continuous)
+                .fill(Color.black.opacity(0.05))
+        )
+    }
+
+    private func tabButton(for tab: Tab) -> some View {
+        let isSelected = tab == selectedTab
+        let count = tab == .history ? historyItems.count : favoriteItems.count
+
+        return Button {
+            selectedTab = tab
+            searchFocused = true
+        } label: {
+            HStack(spacing: 6) {
+                Text(tab.rawValue)
+                Text("\(count)")
+                    .foregroundStyle(isSelected ? Color.primary.opacity(0.7) : Color.secondary)
+            }
+            .font(.system(size: 11, weight: .semibold))
+            .padding(.horizontal, 10)
+            .padding(.vertical, 6)
+            .frame(maxWidth: .infinity)
+            .background(
+                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                    .fill(isSelected ? panelFill : Color.clear)
+            )
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(isSelected ? .primary : .secondary)
     }
 
     private func settingMetric<Control: View>(title: String, value: String, @ViewBuilder control: () -> Control) -> some View {
