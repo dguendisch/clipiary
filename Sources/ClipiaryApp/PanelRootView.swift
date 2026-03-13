@@ -149,74 +149,72 @@ struct PanelRootView: View {
                         .font(.system(size: 11, weight: .medium))
                     }
 
-                    VStack(alignment: .leading, spacing: 8) {
-                        Toggle("Monitor normal copy events", isOn: Binding(
+                    settingsToggleRow(
+                        title: "Monitor normal copy events",
+                        isOn: Binding(
                             get: { appState.settings.isClipboardMonitoringEnabled },
                             set: { appState.settings.isClipboardMonitoringEnabled = $0 }
-                        ))
-                        Toggle("Autoselect highlighted text", isOn: Binding(
+                        )
+                    )
+
+                    settingsToggleRow(
+                        title: "Autoselect highlighted text",
+                        isOn: Binding(
                             get: { appState.settings.isAutoSelectEnabled },
                             set: { appState.settings.isAutoSelectEnabled = $0 }
-                        ))
-                    }
-                    .toggleStyle(.checkbox)
-                    .font(.system(size: 12))
+                        )
+                    )
 
-                    HStack(spacing: 12) {
-                        settingMetric(
-                            title: "Minimum selection",
-                            value: "\(appState.settings.minimumSelectionLength)"
-                        ) {
-                            Stepper("", value: Binding(
-                                get: { appState.settings.minimumSelectionLength },
-                                set: { appState.settings.minimumSelectionLength = max(1, $0) }
-                            ), in: 1...10)
-                            .labelsHidden()
-                        }
-                        settingMetric(
-                            title: "Cooldown",
-                            value: nil
-                        ) {
-                            optionPicker(
-                                selection: Binding(
-                                    get: { appState.settings.autoSelectCooldownMilliseconds },
-                                    set: { appState.settings.autoSelectCooldownMilliseconds = $0 }
-                                ),
-                                options: cooldownOptions,
-                                label: { value in "\(value) ms" },
-                                width: 94
-                            )
-                        }
+                    settingMetric(
+                        title: "Minimum selection",
+                        value: "\(appState.settings.minimumSelectionLength)"
+                    ) {
+                        Stepper("", value: Binding(
+                            get: { appState.settings.minimumSelectionLength },
+                            set: { appState.settings.minimumSelectionLength = max(1, $0) }
+                        ), in: 1...10)
+                        .labelsHidden()
                     }
 
-                    HStack(spacing: 12) {
-                        settingMetric(
-                            title: "History limit",
-                            value: nil
-                        ) {
-                            optionPicker(
-                                selection: Binding(
-                                    get: { appState.settings.historyLimit },
-                                    set: { appState.settings.historyLimit = $0 }
-                                ),
-                                options: historyLimitOptions,
-                                label: { value in "\(value)" },
-                                width: 82
-                            )
-                        }
+                    settingMetric(
+                        title: "Cooldown",
+                        value: nil
+                    ) {
+                        optionPicker(
+                            selection: Binding(
+                                get: { appState.settings.autoSelectCooldownMilliseconds },
+                                set: { appState.settings.autoSelectCooldownMilliseconds = $0 }
+                            ),
+                            options: cooldownOptions,
+                            label: { value in "\(value) ms" },
+                            width: 94
+                        )
                     }
 
-                    HStack(spacing: 12) {
-                        settingMetric(
-                            title: "Global shortcut",
-                            value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
-                        ) {
-                            Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
-                                appState.isRecordingShortcut.toggle()
-                            }
-                            .buttonStyle(.borderless)
-                            .font(.system(size: 11, weight: .medium))
+                    settingMetric(
+                        title: "History limit",
+                        value: nil
+                    ) {
+                        optionPicker(
+                            selection: Binding(
+                                get: { appState.settings.historyLimit },
+                                set: { appState.settings.historyLimit = $0 }
+                            ),
+                            options: historyLimitOptions,
+                            label: { value in "\(value)" },
+                            width: 82
+                        )
+                    }
+
+                    settingMetric(
+                        title: "Global shortcut",
+                        value: appState.isRecordingShortcut ? "Press keys..." : appState.settings.globalShortcut.displayString
+                    ) {
+                        Button(appState.isRecordingShortcut ? "Cancel" : "Record") {
+                            appState.isRecordingShortcut.toggle()
                         }
+                        .buttonStyle(.borderless)
+                        .font(.system(size: 11, weight: .medium))
                     }
                 }
                 .transition(.opacity)
@@ -534,6 +532,20 @@ struct PanelRootView: View {
             Spacer()
             control()
         }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 6)
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(Color.white.opacity(0.001))
+        )
+    }
+
+    private func settingsToggleRow(title: String, isOn: Binding<Bool>) -> some View {
+        Toggle(isOn: isOn) {
+            Text(title)
+                .font(.system(size: 12))
+        }
+        .toggleStyle(.checkbox)
         .padding(.horizontal, 8)
         .padding(.vertical, 6)
         .background(
