@@ -7,7 +7,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     private let favoriteShortcutKeyCode: UInt16 = 3
     private var statusSyncTimer: Timer?
     private var localKeyMonitor: Any?
-    private var suppressFavoriteShortcutKeyUp = false
+    private var suppressedKeyUps = Set<UInt16>()
     private let popover = NSPopover()
     private let hotKeyManager = GlobalHotKeyManager()
     private lazy var statusItem: NSStatusItem = {
@@ -157,13 +157,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             default:
                 appState.updateGlobalShortcut(from: event)
             }
-            return nil
+            return suppressKeyUp(for: event)
         }
 
         if modifiers.contains([.command, .shift]), event.keyCode == favoriteShortcutKeyCode {
-            suppressFavoriteShortcutKeyUp = true
             appState.toggleFavoriteSelectedItem()
-            return nil
+            return suppressKeyUp(for: event)
         }
 
         if !modifiers.isDisjoint(with: [.command, .option, .control]) {
@@ -173,22 +172,22 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
         switch event.keyCode {
         case 123:
             appState.moveTab(direction: -1)
-            return nil
+            return suppressKeyUp(for: event)
         case 124:
             appState.moveTab(direction: 1)
-            return nil
+            return suppressKeyUp(for: event)
         case 125:
             appState.moveSelection(direction: 1)
-            return nil
+            return suppressKeyUp(for: event)
         case 126:
             appState.moveSelection(direction: -1)
-            return nil
+            return suppressKeyUp(for: event)
         case 36:
             appState.restoreSelectedItem()
-            return nil
+            return suppressKeyUp(for: event)
         case 51:
             appState.deleteSelectedItem()
-            return nil
+            return suppressKeyUp(for: event)
         default:
             return event
         }
@@ -199,12 +198,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
             return false
         }
 
-        if suppressFavoriteShortcutKeyUp, event.keyCode == favoriteShortcutKeyCode {
-            suppressFavoriteShortcutKeyUp = false
+        if suppressedKeyUps.contains(event.keyCode) {
+            suppressedKeyUps.remove(event.keyCode)
             return true
         }
 
         return false
+    }
+
+    private func suppressKeyUp(for event: NSEvent) -> NSEvent? {
+        suppressedKeyUps.insert(event.keyCode)
+        return nil
     }
 
     @objc
@@ -243,5 +247,6 @@ final class AppDelegate: NSObject, NSApplicationDelegate, NSPopoverDelegate {
     func popoverDidClose(_ notification: Notification) {
         statusItem.button?.isHighlighted = false
         appState.isRecordingShortcut = false
+        suppressedKeyUps.removeAll()
     }
 }
