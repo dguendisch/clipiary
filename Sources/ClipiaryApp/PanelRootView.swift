@@ -338,17 +338,9 @@ struct PanelRootView: View {
     }
 
     private func historyGroup(title: String, items: [HistoryItem]) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text(title.uppercased())
-                .font(.system(size: 10, weight: .bold))
-                .foregroundStyle(.secondary)
-                .tracking(0.8)
-                .padding(.horizontal, 8)
-
-            LazyVStack(spacing: 2) {
-                ForEach(items) { item in
-                    row(for: item)
-                }
+        LazyVStack(spacing: 2) {
+            ForEach(items) { item in
+                row(for: item)
             }
         }
     }
