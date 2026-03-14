@@ -88,15 +88,15 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          mapfile -t PACK_OUTPUT < <(./scripts/package_release.sh "${{ steps.version.outputs.version }}" "${{ github.run_number }}")
-          printf '%s\n' "${PACK_OUTPUT[@]}"
-          for line in "${PACK_OUTPUT[@]}"; do
+          PACK_OUTPUT_FILE="$RUNNER_TEMP/package-release-output.txt"
+          ./scripts/package_release.sh "${{ steps.version.outputs.version }}" "${{ github.run_number }}" | tee "$PACK_OUTPUT_FILE"
+          while IFS= read -r line; do
             case "$line" in
               version=*|build_number=*|archive_path=*|sha256=*|sha256_path=*|cask_path=*|release_notes_path=*)
                 echo "$line" >>"$GITHUB_OUTPUT"
                 ;;
             esac
-          done
+          done <"$PACK_OUTPUT_FILE"
 
       - name: Summarize release mode
         shell: bash
