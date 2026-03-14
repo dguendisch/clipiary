@@ -7,15 +7,16 @@ import Observation
 final class AppSettings {
     private enum Keys {
         static let clipboardMonitoringEnabled = "clipboardMonitoringEnabled"
-        static let autoSelectEnabled = "autoSelectEnabled"
+        static let copyOnSelectEnabled = "copyOnSelectEnabled"
         static let minimumSelectionLength = "minimumSelectionLength"
-        static let autoSelectCooldownMilliseconds = "autoSelectCooldownMilliseconds"
+        static let copyOnSelectCooldownMilliseconds = "copyOnSelectCooldownMilliseconds"
         static let ignoredBundleIDs = "ignoredBundleIDs"
         static let historyLimit = "historyLimit"
         static let globalHotKeyKeyCode = "globalHotKeyKeyCode"
         static let globalHotKeyModifiers = "globalHotKeyModifiers"
         static let panelWidth = "panelWidth"
         static let panelHeight = "panelHeight"
+        static let moveToTopOnPaste = "moveToTopOnPaste"
     }
 
     private let defaults: UserDefaults
@@ -24,16 +25,16 @@ final class AppSettings {
         didSet { defaults.set(isClipboardMonitoringEnabled, forKey: Keys.clipboardMonitoringEnabled) }
     }
 
-    var isAutoSelectEnabled: Bool {
-        didSet { defaults.set(isAutoSelectEnabled, forKey: Keys.autoSelectEnabled) }
+    var isCopyOnSelectEnabled: Bool {
+        didSet { defaults.set(isCopyOnSelectEnabled, forKey: Keys.copyOnSelectEnabled) }
     }
 
     var minimumSelectionLength: Int {
         didSet { defaults.set(minimumSelectionLength, forKey: Keys.minimumSelectionLength) }
     }
 
-    var autoSelectCooldownMilliseconds: Int {
-        didSet { defaults.set(autoSelectCooldownMilliseconds, forKey: Keys.autoSelectCooldownMilliseconds) }
+    var copyOnSelectCooldownMilliseconds: Int {
+        didSet { defaults.set(copyOnSelectCooldownMilliseconds, forKey: Keys.copyOnSelectCooldownMilliseconds) }
     }
 
     var ignoredBundleIDs: [String] {
@@ -60,31 +61,37 @@ final class AppSettings {
         didSet { defaults.set(panelHeight, forKey: Keys.panelHeight) }
     }
 
+    var moveToTopOnPaste: Bool {
+        didSet { defaults.set(moveToTopOnPaste, forKey: Keys.moveToTopOnPaste) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
             Keys.clipboardMonitoringEnabled: true,
-            Keys.autoSelectEnabled: false,
+            Keys.copyOnSelectEnabled: false,
             Keys.minimumSelectionLength: 2,
-            Keys.autoSelectCooldownMilliseconds: 350,
+            Keys.copyOnSelectCooldownMilliseconds: 350,
             Keys.ignoredBundleIDs: [],
             Keys.historyLimit: 150,
             Keys.globalHotKeyKeyCode: 9,
             Keys.globalHotKeyModifiers: Int((NSEvent.ModifierFlags.command.union(.shift)).rawValue),
             Keys.panelWidth: 376.0,
             Keys.panelHeight: 600.0,
+            Keys.moveToTopOnPaste: true,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
-        isAutoSelectEnabled = defaults.bool(forKey: Keys.autoSelectEnabled)
+        isCopyOnSelectEnabled = defaults.bool(forKey: Keys.copyOnSelectEnabled)
         minimumSelectionLength = defaults.integer(forKey: Keys.minimumSelectionLength)
-        autoSelectCooldownMilliseconds = defaults.integer(forKey: Keys.autoSelectCooldownMilliseconds)
+        copyOnSelectCooldownMilliseconds = defaults.integer(forKey: Keys.copyOnSelectCooldownMilliseconds)
         ignoredBundleIDs = defaults.stringArray(forKey: Keys.ignoredBundleIDs) ?? []
         historyLimit = defaults.integer(forKey: Keys.historyLimit)
         globalHotKeyKeyCode = defaults.integer(forKey: Keys.globalHotKeyKeyCode)
         globalHotKeyModifiers = defaults.integer(forKey: Keys.globalHotKeyModifiers)
         panelWidth = defaults.double(forKey: Keys.panelWidth)
         panelHeight = defaults.double(forKey: Keys.panelHeight)
+        moveToTopOnPaste = defaults.bool(forKey: Keys.moveToTopOnPaste)
     }
 
     var globalShortcut: GlobalShortcut {

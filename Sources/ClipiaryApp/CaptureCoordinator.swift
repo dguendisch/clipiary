@@ -5,8 +5,8 @@ import Foundation
 final class CaptureCoordinator {
     private let history: HistoryStore
     private let settings: AppSettings
-    private var lastAutoSelectText: String?
-    private var lastAutoSelectAt = Date.distantPast
+    private var lastCopyOnSelectText: String?
+    private var lastCopyOnSelectAt = Date.distantPast
     private var suppressNextClipboardChange = false
 
     init(history: HistoryStore, settings: AppSettings) {
@@ -44,18 +44,18 @@ final class CaptureCoordinator {
         )
     }
 
-    func consumeAutoSelectSnapshot(_ snapshot: SelectionSnapshot) {
-        guard settings.isAutoSelectEnabled else {
+    func consumeCopyOnSelectSnapshot(_ snapshot: SelectionSnapshot) {
+        guard settings.isCopyOnSelectEnabled else {
             return
         }
 
         if let text = snapshot.selectedText {
-            registerAutoSelect(text: text, snapshot: snapshot, writeToPasteboard: true)
+            registerCopyOnSelect(text: text, snapshot: snapshot, writeToPasteboard: true)
             return
         }
 
         if shouldTryAnkiFallback(for: snapshot), let text = attemptAnkiShortcutFallback() {
-            registerAutoSelect(text: text, snapshot: snapshot, writeToPasteboard: false)
+            registerCopyOnSelect(text: text, snapshot: snapshot, writeToPasteboard: false)
         }
     }
 
@@ -69,7 +69,7 @@ final class CaptureCoordinator {
         suppressNextClipboardChange = true
     }
 
-    private func registerAutoSelect(text: String, snapshot: SelectionSnapshot, writeToPasteboard: Bool) {
+    private func registerCopyOnSelect(text: String, snapshot: SelectionSnapshot, writeToPasteboard: Bool) {
         guard !settings.ignores(bundleID: snapshot.bundleID) else {
             return
         }
@@ -79,12 +79,12 @@ final class CaptureCoordinator {
             return
         }
 
-        let cooldown = Double(settings.autoSelectCooldownMilliseconds) / 1_000
-        guard Date().timeIntervalSince(lastAutoSelectAt) >= cooldown else {
+        let cooldown = Double(settings.copyOnSelectCooldownMilliseconds) / 1_000
+        guard Date().timeIntervalSince(lastCopyOnSelectAt) >= cooldown else {
             return
         }
 
-        guard lastAutoSelectText != text else {
+        guard lastCopyOnSelectText != text else {
             return
         }
 
@@ -99,13 +99,13 @@ final class CaptureCoordinator {
         suppressNextClipboardChange = true
         let item = HistoryItem(
             text: text,
-            source: .autoSelect,
+            source: .copyOnSelect,
             appName: snapshot.appName,
             bundleID: snapshot.bundleID
         )
         history.add(item, limit: settings.historyLimit)
-        lastAutoSelectText = text
-        lastAutoSelectAt = .now
+        lastCopyOnSelectText = text
+        lastCopyOnSelectAt = .now
     }
 
     private func shouldTryAnkiFallback(for snapshot: SelectionSnapshot) -> Bool {
@@ -121,8 +121,8 @@ final class CaptureCoordinator {
             return false
         }
 
-        let cooldown = Double(settings.autoSelectCooldownMilliseconds) / 1_000
-        return Date().timeIntervalSince(lastAutoSelectAt) >= cooldown
+        let cooldown = Double(settings.copyOnSelectCooldownMilliseconds) / 1_000
+        return Date().timeIntervalSince(lastCopyOnSelectAt) >= cooldown
     }
 
     private func attemptAnkiShortcutFallback(timeout: TimeInterval = 0.4) -> String? {
@@ -147,28 +147,32 @@ final class CaptureCoordinator {
     }
 
     private func postCommandC() -> Bool {
+        postCommandKey(vKey: 8)
+    }
+
+    @discardableResult
+    private func postCommandKey(vKey: CGKeyCode) -> Bool {
         guard let source = CGEventSource(stateID: .combinedSessionState) else {
             return false
         }
 
         let commandKey: CGKeyCode = 55
-        let cKey: CGKeyCode = 8
 
         guard
             let commandDown = CGEvent(keyboardEventSource: source, virtualKey: commandKey, keyDown: true),
-            let cDown = CGEvent(keyboardEventSource: source, virtualKey: cKey, keyDown: true),
-            let cUp = CGEvent(keyboardEventSource: source, virtualKey: cKey, keyDown: false),
+            let keyDown = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: true),
+            let keyUp = CGEvent(keyboardEventSource: source, virtualKey: vKey, keyDown: false),
             let commandUp = CGEvent(keyboardEventSource: source, virtualKey: commandKey, keyDown: false)
         else {
             return false
         }
 
-        cDown.flags = .maskCommand
-        cUp.flags = .maskCommand
+        keyDown.flags = .maskCommand
+        keyUp.flags = .maskCommand
 
         commandDown.post(tap: .cghidEventTap)
-        cDown.post(tap: .cghidEventTap)
-        cUp.post(tap: .cghidEventTap)
+        keyDown.post(tap: .cghidEventTap)
+        keyUp.post(tap: .cghidEventTap)
         commandUp.post(tap: .cghidEventTap)
         return true
     }

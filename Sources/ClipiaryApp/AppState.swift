@@ -24,16 +24,17 @@ final class AppState {
     var isRecordingShortcut = false
     private(set) var searchFocusRequestID = 0
     private(set) var popoverOpenRequestID = 0
+    private(set) var pasteSelectedRequestID = 0
 
     @ObservationIgnored private let captureCoordinator: CaptureCoordinator
     @ObservationIgnored private let clipboardMonitor: ClipboardMonitor
-    @ObservationIgnored private let autoSelectEngine: AutoSelectEngine
+    @ObservationIgnored private let copyOnSelectEngine: CopyOnSelectEngine
 
     private init() {
         let captureCoordinator = CaptureCoordinator(history: history, settings: settings)
         self.captureCoordinator = captureCoordinator
         self.clipboardMonitor = ClipboardMonitor(settings: settings, captureCoordinator: captureCoordinator)
-        self.autoSelectEngine = AutoSelectEngine(
+        self.copyOnSelectEngine = CopyOnSelectEngine(
             settings: settings,
             permissionManager: permissionManager,
             captureCoordinator: captureCoordinator
@@ -45,12 +46,12 @@ final class AppState {
         history.enforceLimit(settings.historyLimit)
         permissionManager.refreshTrust()
         clipboardMonitor.start()
-        autoSelectEngine.start()
+        copyOnSelectEngine.start()
         ensureSelection()
         synchronizeHistoryLimit()
     }
 
-    func refreshAutoSelectPermissions() {
+    func refreshCopyOnSelectPermissions() {
         permissionManager.requestAccessPrompt()
         permissionManager.openPrivacySettings()
     }
@@ -174,6 +175,9 @@ final class AppState {
             return
         }
         restore(item)
+        if settings.moveToTopOnPaste {
+            history.moveToTop(item)
+        }
     }
 
     func toggleFavoriteSelectedItem() {
@@ -220,6 +224,12 @@ final class AppState {
 
     func requestSearchFocus() {
         searchFocusRequestID &+= 1
+    }
+
+    func requestPasteSelected() {
+        restoreSelectedItem()
+        searchQuery = ""
+        pasteSelectedRequestID &+= 1
     }
 
     private func synchronizeHistoryLimit() {
