@@ -19,6 +19,12 @@ Build a stable app bundle for Accessibility approval:
 ./scripts/build_app.sh
 ```
 
+Regenerate the app icon from a custom `1024x1024` PNG export:
+
+```sh
+./scripts/build_app_icon.sh /path/to/icon-1024.png
+```
+
 Optional local signing configuration:
 
 Create a repo-local `.env` file with:
@@ -65,18 +71,18 @@ Casks/clipiary.rb
 To build a release archive and generate the cask file locally:
 
 ```sh
-./scripts/package_release.sh 0.1.0
+./scripts/package_release.sh 0.2.0
 ```
 
 That command writes:
 
-- `dist/Clipiary-0.1.0.zip`
-- `dist/Clipiary-0.1.0.sha256`
+- `dist/Clipiary-0.2.0.zip`
+- `dist/Clipiary-0.2.0.sha256`
 - `dist/clipiary.rb`
 
 ### CI release flow
 
-The workflow in `.github/workflows/release.yml` is tag-driven and release-only. Pushing a tag such as `v0.1.0` from a commit on `main` will:
+The workflow in `.github/workflows/release.yml` is tag-driven and release-only. Pushing a tag such as `v0.2.0` from a commit on `main` will:
 
 1. build the macOS app bundle
 2. sign and notarize it only when the Apple signing secrets are configured

@@ -7,12 +7,13 @@ source "$ROOT_DIR/scripts/load_env.sh"
 CONFIGURATION="${1:-debug}"
 APP_NAME="Clipiary"
 BUNDLE_ID="${CLIPIARY_BUNDLE_ID:-dev.liamhess.clipiary}"
-APP_VERSION="${CLIPIARY_VERSION:-0.1.0}"
+APP_VERSION="${CLIPIARY_VERSION:-0.2.0}"
 BUILD_NUMBER="${CLIPIARY_BUILD_NUMBER:-1}"
 APP_BUNDLE="$ROOT_DIR/dist/$APP_NAME.app"
 CONTENTS_DIR="$APP_BUNDLE/Contents"
 MACOS_DIR="$CONTENTS_DIR/MacOS"
 RESOURCES_DIR="$CONTENTS_DIR/Resources"
+ICON_SOURCE="$ROOT_DIR/Resources/AppIcon.icns"
 TMP_HOME="$ROOT_DIR/.tmp-home"
 MODULE_CACHE="$ROOT_DIR/.build/module-cache"
 CLANG_CACHE="$ROOT_DIR/.build/clang-module-cache"
@@ -55,10 +56,19 @@ chmod +x "$MACOS_DIR/$APP_NAME"
 /usr/libexec/PlistBuddy -c "Add :LSUIElement bool true" "$CONTENTS_DIR/Info.plist"
 /usr/libexec/PlistBuddy -c "Add :NSPrincipalClass string NSApplication" "$CONTENTS_DIR/Info.plist"
 
+if [[ -f "$ICON_SOURCE" ]]; then
+  cp "$ICON_SOURCE" "$RESOURCES_DIR/AppIcon.icns"
+  /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$CONTENTS_DIR/Info.plist"
+fi
+
 if [[ -n "$CODESIGN_IDENTITY" ]]; then
   # Extra flags are injected by release automation for hardened runtime and timestamps.
-  read -r -a EXTRA_CODESIGN_FLAGS <<<"$CODESIGN_FLAGS"
-  codesign --force --deep --sign "$CODESIGN_IDENTITY" "${EXTRA_CODESIGN_FLAGS[@]}" "$APP_BUNDLE"
+  if [[ -n "$CODESIGN_FLAGS" ]]; then
+    read -r -a EXTRA_CODESIGN_FLAGS <<<"$CODESIGN_FLAGS"
+    codesign --force --deep --sign "$CODESIGN_IDENTITY" "${EXTRA_CODESIGN_FLAGS[@]}" "$APP_BUNDLE"
+  else
+    codesign --force --deep --sign "$CODESIGN_IDENTITY" "$APP_BUNDLE"
+  fi
   echo "Signed app bundle with identity: $CODESIGN_IDENTITY"
 else
   codesign --remove-signature "$APP_BUNDLE" 2>/dev/null || true
