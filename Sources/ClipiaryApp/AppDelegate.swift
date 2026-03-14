@@ -287,6 +287,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func panelDidClose() {
         statusItem.button?.isHighlighted = false
         appState.isRecordingShortcut = false
+        appState.searchQuery = ""
         suppressedKeyUps.removeAll()
         let targetApp = previousApp
         previousApp = nil
