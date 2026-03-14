@@ -195,10 +195,15 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         switch event.keyCode {
+        case 49:
+            appState.togglePreview()
+            return suppressKeyUp(for: event)
         case 123:
+            guard appState.searchQuery.isEmpty else { return event }
             appState.moveTab(direction: -1)
             return suppressKeyUp(for: event)
         case 124:
+            guard appState.searchQuery.isEmpty else { return event }
             appState.moveTab(direction: 1)
             return suppressKeyUp(for: event)
         case 125:
@@ -219,7 +224,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func shouldSuppressKeyUp(_ event: NSEvent) -> Bool {
-        guard isPanelVisible, event.type == .keyUp else {
+        guard event.type == .keyUp else {
             return false
         }
 
@@ -283,6 +288,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.isHighlighted = false
         appState.isRecordingShortcut = false
         suppressedKeyUps.removeAll()
+        let targetApp = previousApp
+        previousApp = nil
+        targetApp?.activate()
     }
 
     private func observePasteRequests() {

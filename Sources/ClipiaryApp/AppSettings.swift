@@ -17,6 +17,8 @@ final class AppSettings {
         static let panelWidth = "panelWidth"
         static let panelHeight = "panelHeight"
         static let moveToTopOnPaste = "moveToTopOnPaste"
+        static let showItemDetails = "showItemDetails"
+        static let alwaysShowSearch = "alwaysShowSearch"
     }
 
     private let defaults: UserDefaults
@@ -65,6 +67,14 @@ final class AppSettings {
         didSet { defaults.set(moveToTopOnPaste, forKey: Keys.moveToTopOnPaste) }
     }
 
+    var showItemDetails: Bool {
+        didSet { defaults.set(showItemDetails, forKey: Keys.showItemDetails) }
+    }
+
+    var alwaysShowSearch: Bool {
+        didSet { defaults.set(alwaysShowSearch, forKey: Keys.alwaysShowSearch) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -73,12 +83,14 @@ final class AppSettings {
             Keys.minimumSelectionLength: 2,
             Keys.copyOnSelectCooldownMilliseconds: 350,
             Keys.ignoredBundleIDs: [],
-            Keys.historyLimit: 150,
+            Keys.historyLimit: 1_000,
             Keys.globalHotKeyKeyCode: 9,
             Keys.globalHotKeyModifiers: Int((NSEvent.ModifierFlags.command.union(.shift)).rawValue),
             Keys.panelWidth: 376.0,
             Keys.panelHeight: 600.0,
             Keys.moveToTopOnPaste: true,
+            Keys.showItemDetails: true,
+            Keys.alwaysShowSearch: true,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -92,6 +104,8 @@ final class AppSettings {
         panelWidth = defaults.double(forKey: Keys.panelWidth)
         panelHeight = defaults.double(forKey: Keys.panelHeight)
         moveToTopOnPaste = defaults.bool(forKey: Keys.moveToTopOnPaste)
+        showItemDetails = defaults.bool(forKey: Keys.showItemDetails)
+        alwaysShowSearch = defaults.bool(forKey: Keys.alwaysShowSearch)
     }
 
     var globalShortcut: GlobalShortcut {

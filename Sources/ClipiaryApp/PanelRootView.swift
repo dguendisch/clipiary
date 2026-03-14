@@ -3,7 +3,7 @@ import SwiftUI
 
 struct PanelRootView: View {
     private let cooldownOptions = [100, 200, 350, 500, 750, 1_000, 1_500, 2_000]
-    private let historyLimitOptions = [50, 100, 150, 250, 500, 750, 1_000]
+    private let historyLimitOptions = [50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]
 
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
@@ -69,6 +69,8 @@ struct PanelRootView: View {
             }
 
             searchField
+                .frame(height: appState.settings.alwaysShowSearch || !appState.searchQuery.isEmpty ? nil : 0)
+                .clipped()
 
             ScrollViewReader { proxy in
                 ScrollView {
@@ -166,6 +168,22 @@ struct PanelRootView: View {
                     )
 
                     settingsToggleRow(
+                        title: "Show item details",
+                        isOn: Binding(
+                            get: { appState.settings.showItemDetails },
+                            set: { appState.settings.showItemDetails = $0 }
+                        )
+                    )
+
+                    settingsToggleRow(
+                        title: "Always show search field",
+                        isOn: Binding(
+                            get: { appState.settings.alwaysShowSearch },
+                            set: { appState.settings.alwaysShowSearch = $0 }
+                        )
+                    )
+
+                    settingsToggleRow(
                         title: "Copy on select",
                         isOn: Binding(
                             get: { appState.settings.isCopyOnSelectEnabled },
@@ -210,7 +228,7 @@ struct PanelRootView: View {
                             ),
                             options: historyLimitOptions,
                             label: { value in "\(value)" },
-                            width: 82
+                            width: 94
                         )
                     }
 
@@ -282,10 +300,17 @@ struct PanelRootView: View {
                 .foregroundStyle(.secondary)
             TextField("Search clipboard history", text: Binding(
                 get: { appState.searchQuery },
-                set: { appState.searchQuery = $0 }
+                set: {
+                    if $0.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                        appState.searchQuery = ""
+                    } else {
+                        appState.searchQuery = $0
+                    }
+                }
             ))
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
+                .onKeyPress(keys: [.upArrow, .downArrow, .space]) { _ in .handled }
                 .onSubmit {
                     appState.requestPasteSelected()
                 }
@@ -379,14 +404,16 @@ struct PanelRootView: View {
                 .opacity(hoveredItemID == item.id ? 1 : 0.45)
             }
 
-            HStack(spacing: 6) {
-                Text(item.appName)
-                Text(item.source == .copyOnSelect ? "Selection" : "Clipboard")
-                Text(item.createdAt.formatted(date: .omitted, time: .shortened))
+            if appState.settings.showItemDetails {
+                HStack(spacing: 6) {
+                    Text(item.appName)
+                    Text(item.source == .copyOnSelect ? "Selection" : "Clipboard")
+                    Text(item.createdAt.formatted(date: .omitted, time: .shortened))
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 22)
             }
-            .font(.system(size: 10, weight: .medium))
-            .foregroundStyle(.secondary)
-            .padding(.leading, 22)
         }
         .padding(.horizontal, 8)
         .padding(.vertical, 8)
@@ -399,6 +426,15 @@ struct PanelRootView: View {
         }
         .onHover { isHovered in
             hoveredItemID = isHovered ? item.id : (hoveredItemID == item.id ? nil : hoveredItemID)
+        }
+        .popover(
+            isPresented: Binding(
+                get: { appState.isPreviewVisible && appState.selectedHistoryItemID == item.id },
+                set: { if !$0 { appState.isPreviewVisible = false } }
+            ),
+            arrowEdge: .trailing
+        ) {
+            itemPreview(for: item)
         }
     }
 
@@ -424,6 +460,16 @@ struct PanelRootView: View {
             .fill(rowFill(for: item))
     }
 
+    private func itemPreview(for item: HistoryItem) -> some View {
+        ScrollView {
+            Text(item.text)
+                .font(.system(size: 13))
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(12)
+        }
+        .frame(idealWidth: 500, maxHeight: 600)
+    }
+
     private var shortcutsHelpPopover: some View {
         VStack(alignment: .leading, spacing: 10) {
             Text("Keyboard Shortcuts")
@@ -436,6 +482,7 @@ struct PanelRootView: View {
                 shortcutRow("Move selection", "Up / Down")
                 shortcutRow("Switch tabs", "Left / Right")
                 shortcutRow("Restore selected item", "Return")
+                shortcutRow("Preview selected item", "Space")
                 shortcutRow("Delete selected item", "Delete")
                 shortcutRow("Close popover", "Esc")
             }
