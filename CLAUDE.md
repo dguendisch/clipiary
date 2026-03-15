@@ -75,11 +75,11 @@ All source code lives in `Sources/ClipiaryApp/` (single SPM executable target, S
 
 ## Release Workflow
 
-Tag-driven CI via `.github/workflows/release.yml`. Pushing a `v*` tag on `main` builds, optionally signs/notarizes, creates a GitHub release, and updates the `liamhess/homebrew-tap` cask.
+Tag-driven CI via `.github/workflows/release.yml`. Pushing a `v*` tag on `main` builds, optionally signs with a stable identity, optionally notarizes, creates a GitHub release, and updates the `liamhess/homebrew-tap` cask.
 
 ## Environment Variables
 
 Optional `.env` file (sourced automatically by scripts):
-- `CLIPIARY_CODESIGN_IDENTITY` — Apple code signing identity
+- `CLIPIARY_CODESIGN_IDENTITY` — code signing identity (Apple or self-signed)
 - `CLIPIARY_BUNDLE_ID` — bundle identifier override
 - `CLIPIARY_VERSION` / `CLIPIARY_BUILD_NUMBER` — version overrides

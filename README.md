@@ -30,12 +30,12 @@ Optional local signing configuration:
 Create a repo-local `.env` file with:
 
 ```sh
-export CLIPIARY_CODESIGN_IDENTITY="Apple Development: Your Name (TEAMID)"
+export CLIPIARY_CODESIGN_IDENTITY="Clipiary Release Signing"
 ```
 
 The build, run, and dev scripts will source `.env` automatically.
 
-If `CLIPIARY_CODESIGN_IDENTITY` is not set, the app bundle is still ad-hoc signed so unsigned private releases behave more like standard "untrusted developer" apps on macOS.
+Use one stable signing identity for every build you expect users to approve in Accessibility settings. That can be an Apple certificate or a long-lived self-signed code-signing certificate. If `CLIPIARY_CODESIGN_IDENTITY` is not set, the app bundle falls back to ad-hoc signing, which is convenient for local testing but can cause macOS to treat upgrades as a new app for TCC permissions like Accessibility.
 
 Run the app bundle:
 
@@ -87,27 +87,38 @@ That command writes:
 The workflow in `.github/workflows/release.yml` is tag-driven and release-only. Pushing a tag such as `v0.3.1` from a commit on `main` will:
 
 1. build the macOS app bundle
-2. sign and notarize it when the Apple signing secrets are configured, otherwise fall back to ad-hoc signing
+2. sign it when a stable signing identity is configured, and notarize it when the Apple notary secrets are also configured
 3. upload `Clipiary-<version>.zip` to the GitHub release
 4. update `liamhess/homebrew-tap` with a new `Casks/clipiary.rb`
 
 If a tag points to a commit that is not contained in `main`, the workflow exits without publishing.
 
-Minimum GitHub Actions secret for unsigned private releases:
+Minimum GitHub Actions secret for private tap releases:
 
 - `HOMEBREW_TAP_DEPLOY_KEY`
 
-Optional GitHub Actions secrets for signed and notarized releases later:
+Recommended GitHub Actions secrets for stable signed releases:
+
+- `CLIPIARY_CODESIGN_IDENTITY`
+- `CLIPIARY_CODESIGN_P12_BASE64`
+- `CLIPIARY_CODESIGN_P12_PASSWORD`
+- `CLIPIARY_KEYCHAIN_PASSWORD`
+
+Optional legacy aliases still supported by the workflow:
 
 - `CLIPIARY_DEVELOPER_ID_APPLICATION`
 - `CLIPIARY_DEVELOPER_ID_P12_BASE64`
 - `CLIPIARY_DEVELOPER_ID_P12_PASSWORD`
-- `CLIPIARY_KEYCHAIN_PASSWORD`
+
+Optional GitHub Actions secrets for Apple notarization:
+
 - `CLIPIARY_NOTARY_APPLE_ID`
 - `CLIPIARY_NOTARY_TEAM_ID`
 - `CLIPIARY_NOTARY_PASSWORD`
 
-If the Apple signing and notarization secrets are omitted, the workflow still works for a private tap. It will publish an ad-hoc-signed app archive and update the cask, but macOS will still treat it as an untrusted developer build rather than a trusted notarized app.
+The best no-Apple-ID setup is a long-lived self-signed code-signing certificate exported as a `.p12` and reused for every release. That gives Homebrew users a stable app identity, which is the best chance of preserving Accessibility approval across upgrades. The app will still be an untrusted developer build for Gatekeeper because it is not notarized.
+
+If all signing secrets are omitted, the workflow still works for a private tap. It will publish an ad-hoc-signed app archive and update the cask, but macOS may treat each upgrade as a new app for Accessibility approval.
 
 ### Deploy key setup
 
