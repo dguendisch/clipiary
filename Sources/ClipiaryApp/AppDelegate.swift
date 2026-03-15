@@ -9,7 +9,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var suppressedKeyUps = Set<UInt16>()
     private var panel: FloatingPanel?
     private var previousApp: NSRunningApplication?
-    private let hotKeyManager = GlobalHotKeyManager()
+    private let hotKeyManager = GlobalHotKeyManager(id: 1)
+    private let quickPasteHotKeyManager = GlobalHotKeyManager(id: 2)
     private lazy var statusItem: NSStatusItem = {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.behavior = .removalAllowed
@@ -34,6 +35,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         configureHotKey()
         configureKeyMonitor()
         observePasteRequests()
+        observeQuickPasteRequests()
         updateStatusItem()
         statusSyncTimer = Timer.scheduledTimer(withTimeInterval: 1, repeats: true) { [weak self] _ in
             Task { @MainActor [weak self] in
@@ -124,6 +126,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         hotKeyManager.onTrigger = { [weak self] in
             self?.togglePopover()
         }
+        quickPasteHotKeyManager.onTrigger = { [weak self] in
+            self?.appState.requestQuickPaste()
+        }
         synchronizeHotKeyRegistration()
     }
 
@@ -133,10 +138,13 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateHotKeyRegistration() {
-        if appState.isRecordingShortcut {
+        let anyRecording = appState.isRecordingShortcut || appState.isRecordingQuickPasteShortcut
+        if anyRecording {
             hotKeyManager.unregister()
+            quickPasteHotKeyManager.unregister()
         } else {
             hotKeyManager.register(shortcut: appState.settings.globalShortcut)
+            quickPasteHotKeyManager.register(shortcut: appState.settings.quickPasteShortcut)
         }
     }
 
@@ -145,7 +153,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             (
                 appState.settings.globalHotKeyKeyCode,
                 appState.settings.globalHotKeyModifiers,
-                appState.isRecordingShortcut
+                appState.settings.quickPasteHotKeyKeyCode,
+                appState.settings.quickPasteHotKeyModifiers,
+                appState.isRecordingShortcut,
+                appState.isRecordingQuickPasteShortcut
             )
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -190,8 +201,34 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
             return suppressKeyUp(for: event)
         }
 
+        if appState.isRecordingQuickPasteShortcut {
+            switch event.keyCode {
+            case 53:
+                appState.isRecordingQuickPasteShortcut = false
+            default:
+                appState.updateQuickPasteShortcut(from: event)
+            }
+            return suppressKeyUp(for: event)
+        }
+
         if !modifiers.isDisjoint(with: [.command, .option, .control]) {
             return event
+        }
+
+        if appState.showingFavoriteTabPicker {
+            switch event.keyCode {
+            case 125: // Down
+                appState.movePickerSelection(direction: 1)
+                return suppressKeyUp(for: event)
+            case 126: // Up
+                appState.movePickerSelection(direction: -1)
+                return suppressKeyUp(for: event)
+            case 36, 49: // Return, Space
+                appState.confirmPickerSelection()
+                return suppressKeyUp(for: event)
+            default:
+                return event
+            }
         }
 
         switch event.keyCode {
@@ -288,6 +325,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private func panelDidClose() {
         statusItem.button?.isHighlighted = false
         appState.isRecordingShortcut = false
+        appState.isRecordingQuickPasteShortcut = false
+        appState.showingFavoriteTabPicker = false
         appState.searchQuery = ""
         suppressedKeyUps.removeAll()
         let targetApp = previousApp
@@ -303,6 +342,24 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 self?.pasteSelectedAndClose()
                 self?.observePasteRequests()
             }
+        }
+    }
+
+    private func observeQuickPasteRequests() {
+        _ = withObservationTracking {
+            appState.quickPasteRequestID
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                self?.quickPaste()
+                self?.observeQuickPasteRequests()
+            }
+        }
+    }
+
+    private func quickPaste() {
+        guard AXIsProcessTrusted() else { return }
+        DispatchQueue.main.asyncAfter(deadline: .now() + 0.05) {
+            Self.postPaste()
         }
     }
 
