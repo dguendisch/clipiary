@@ -196,6 +196,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
         switch event.keyCode {
         case 49:
+            guard appState.searchQuery.isEmpty else { return event }
             appState.togglePreview()
             return suppressKeyUp(for: event)
         case 123:

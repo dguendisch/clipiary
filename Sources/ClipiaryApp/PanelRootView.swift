@@ -310,7 +310,8 @@ struct PanelRootView: View {
             ))
                 .textFieldStyle(.plain)
                 .focused($searchFocused)
-                .onKeyPress(keys: [.upArrow, .downArrow, .space]) { _ in .handled }
+                .onKeyPress(keys: [.upArrow, .downArrow]) { _ in .handled }
+                .onKeyPress(.space) { appState.searchQuery.isEmpty ? .handled : .ignored }
                 .onSubmit {
                     appState.requestPasteSelected()
                 }
