@@ -27,6 +27,9 @@ Clipiary lives in your menu bar. Click the icon or press **Cmd+Shift+V** (config
 
 **Quick paste previous** — Press **Ctrl+Opt+Cmd+P** (configurable) to instantly paste the second item from your history without opening Clipiary. Useful for swapping between two clipboard entries.
 
+**Copy-on-select** currently works for many apps but not for all (depending on the apps specific accessibility settings).
+You can configure the amount of latest copy-on-select items that should be kept in the history, to avoid polluting it with mouse selections that were never intended to be copied/pasted (copy-on-select items that were actually pasted are exempt from removal).
+
 ### Custom Favorites Tabs
 
 By default there is a single "Favorites" tab. You can configure multiple named favorites tabs by creating a config file at:

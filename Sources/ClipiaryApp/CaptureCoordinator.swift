@@ -9,6 +9,7 @@ final class CaptureCoordinator {
     private var lastCopyOnSelectText: String?
     private var lastCopyOnSelectAt = Date.distantPast
     private var suppressNextClipboardChange = false
+    private var pasteMonitor: Any?
 
     init(history: HistoryStore, settings: AppSettings) {
         self.history = history
@@ -152,6 +153,27 @@ final class CaptureCoordinator {
         history.evictUnpastedCopyOnSelect(limit: settings.copyOnSelectBufferLimit)
         lastCopyOnSelectText = text
         lastCopyOnSelectAt = .now
+    }
+
+    func startPasteMonitor() {
+        guard pasteMonitor == nil else { return }
+        pasteMonitor = NSEvent.addGlobalMonitorForEvents(matching: .keyDown) { [weak self] event in
+            // keyCode 9 = V, check for Cmd modifier
+            guard event.keyCode == 9, event.modifierFlags.contains(.command) else { return }
+            Task { @MainActor [weak self] in
+                self?.markClipboardContentAsPasted()
+            }
+        }
+    }
+
+    private func markClipboardContentAsPasted() {
+        let pasteboard = NSPasteboard.general
+        guard let text = pasteboard.string(forType: .string) else { return }
+        if let item = history.items.first(where: {
+            $0.source == .copyOnSelect && !$0.wasPasted && $0.text == text
+        }) {
+            history.markAsPasted(item)
+        }
     }
 
     private func shouldTryAnkiFallback(for snapshot: SelectionSnapshot) -> Bool {

@@ -76,6 +76,7 @@ final class AppState {
         permissionManager.refreshTrust()
         clipboardMonitor.start()
         copyOnSelectEngine.start()
+        captureCoordinator.startPasteMonitor()
         ensureSelection()
         synchronizeHistoryLimit()
     }
