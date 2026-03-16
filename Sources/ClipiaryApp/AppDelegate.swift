@@ -325,7 +325,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         suppressedKeyUps.removeAll()
         let targetApp = previousApp
         previousApp = nil
-        targetApp?.activate()
+        // Only restore the previous app if the user hasn't already switched away
+        // (e.g. via Cmd+Tab). If the frontmost app is already something else, respect that.
+        let frontmost = NSWorkspace.shared.frontmostApplication
+        if frontmost?.bundleIdentifier == Bundle.main.bundleIdentifier {
+            targetApp?.activate()
+        }
     }
 
     private func observePasteRequests() {
