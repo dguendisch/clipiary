@@ -10,6 +10,7 @@ private struct SelectedRowAnchorKey: PreferenceKey {
 
 struct PanelRootView: View {
     private let cooldownOptions = [100, 200, 350, 500, 750, 1_000, 1_500, 2_000]
+    private let selectionBufferOptions = [1, 2, 3, 5, 10]
     private let historyLimitOptions = [50, 100, 250, 500, 1_000, 2_500, 5_000, 10_000]
 
     @Environment(AppState.self) private var appState
@@ -226,6 +227,21 @@ struct PanelRootView: View {
                             ),
                             options: cooldownOptions,
                             label: { value in "\(value) ms" },
+                            width: 94
+                        )
+                    }
+
+                    settingMetric(
+                        title: "Keep unused copy-on-select items",
+                        value: nil
+                    ) {
+                        optionPicker(
+                            selection: Binding(
+                                get: { appState.settings.copyOnSelectBufferLimit },
+                                set: { appState.settings.copyOnSelectBufferLimit = $0 }
+                            ),
+                            options: selectionBufferOptions,
+                            label: { value in "\(value)" },
                             width: 94
                         )
                     }

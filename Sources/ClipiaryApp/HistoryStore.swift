@@ -168,6 +168,31 @@ final class HistoryStore {
         persist()
     }
 
+    func markAsPasted(_ item: HistoryItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else {
+            return
+        }
+        items[index].wasPasted = true
+        persist()
+    }
+
+    func evictUnpastedCopyOnSelect(limit: Int) {
+        let unpasted = items
+            .enumerated()
+            .filter { $0.element.source == .copyOnSelect && !$0.element.wasPasted && $0.element.favoriteTabs.isEmpty }
+            .sorted { $0.element.createdAt > $1.element.createdAt }
+
+        guard unpasted.count > limit else { return }
+
+        let toEvict = unpasted.dropFirst(limit)
+        let evictIDs = Set(toEvict.map { $0.element.id })
+        for entry in toEvict {
+            deleteImageFile(for: entry.element)
+        }
+        items.removeAll { evictIDs.contains($0.id) }
+        persist()
+    }
+
     private func trim(limit: Int) {
         let favorites = items.filter { !$0.favoriteTabs.isEmpty }
         let nonFavorites = recencyOrderedItems(items.filter { $0.favoriteTabs.isEmpty })

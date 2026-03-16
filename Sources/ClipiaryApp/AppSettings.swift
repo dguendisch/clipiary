@@ -21,6 +21,7 @@ final class AppSettings {
         static let moveToTopOnPaste = "moveToTopOnPaste"
         static let showItemDetails = "showItemDetails"
         static let alwaysShowSearch = "alwaysShowSearch"
+        static let copyOnSelectBufferLimit = "copyOnSelectBufferLimit"
     }
 
     private let defaults: UserDefaults
@@ -85,6 +86,10 @@ final class AppSettings {
         didSet { defaults.set(alwaysShowSearch, forKey: Keys.alwaysShowSearch) }
     }
 
+    var copyOnSelectBufferLimit: Int {
+        didSet { defaults.set(copyOnSelectBufferLimit, forKey: Keys.copyOnSelectBufferLimit) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -103,6 +108,7 @@ final class AppSettings {
             Keys.moveToTopOnPaste: true,
             Keys.showItemDetails: true,
             Keys.alwaysShowSearch: true,
+            Keys.copyOnSelectBufferLimit: 3,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -120,6 +126,7 @@ final class AppSettings {
         moveToTopOnPaste = defaults.bool(forKey: Keys.moveToTopOnPaste)
         showItemDetails = defaults.bool(forKey: Keys.showItemDetails)
         alwaysShowSearch = defaults.bool(forKey: Keys.alwaysShowSearch)
+        copyOnSelectBufferLimit = defaults.integer(forKey: Keys.copyOnSelectBufferLimit)
     }
 
     var globalShortcut: GlobalShortcut {

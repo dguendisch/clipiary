@@ -149,6 +149,7 @@ final class CaptureCoordinator {
             bundleID: snapshot.bundleID
         )
         history.add(item, limit: settings.historyLimit)
+        history.evictUnpastedCopyOnSelect(limit: settings.copyOnSelectBufferLimit)
         lastCopyOnSelectText = text
         lastCopyOnSelectAt = .now
     }

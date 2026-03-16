@@ -226,6 +226,7 @@ final class AppState {
         guard let item = selectedItem else {
             return
         }
+        history.markAsPasted(item)
         restore(item)
         if settings.moveToTopOnPaste {
             history.moveToTop(item)
@@ -344,6 +345,7 @@ final class AppState {
     func requestQuickPaste() {
         guard history.items.count >= 2 else { return }
         let item = history.items[1]
+        history.markAsPasted(item)
         restore(item)
         if settings.moveToTopOnPaste {
             history.moveToTop(item)

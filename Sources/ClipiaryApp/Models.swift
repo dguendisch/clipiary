@@ -17,6 +17,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
     var isMonospace: Bool
     var imageFileName: String?
     var imageHash: String?
+    var wasPasted: Bool
 
     init(
         id: UUID = UUID(),
@@ -28,7 +29,8 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         favoriteTabs: Set<String> = [],
         isMonospace: Bool = false,
         imageFileName: String? = nil,
-        imageHash: String? = nil
+        imageHash: String? = nil,
+        wasPasted: Bool = false
     ) {
         self.id = id
         self.text = text
@@ -40,6 +42,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         self.isMonospace = isMonospace
         self.imageFileName = imageFileName
         self.imageHash = imageHash
+        self.wasPasted = wasPasted
     }
 
     var isImage: Bool {
@@ -64,6 +67,7 @@ extension HistoryItem: Codable {
         case isFavorite // legacy key for decoding only
         case monospace
         case imageFileName, imageHash
+        case wasPasted
     }
 
     init(from decoder: Decoder) throws {
@@ -77,6 +81,7 @@ extension HistoryItem: Codable {
         isMonospace = (try? container.decode(Bool.self, forKey: .monospace)) ?? false
         imageFileName = try container.decodeIfPresent(String.self, forKey: .imageFileName)
         imageHash = try container.decodeIfPresent(String.self, forKey: .imageHash)
+        wasPasted = (try? container.decode(Bool.self, forKey: .wasPasted)) ?? false
 
         if let tabs = try? container.decode(Set<String>.self, forKey: .favoriteTabs) {
             favoriteTabs = tabs
@@ -99,6 +104,7 @@ extension HistoryItem: Codable {
         try container.encode(isMonospace, forKey: .monospace)
         try container.encodeIfPresent(imageFileName, forKey: .imageFileName)
         try container.encodeIfPresent(imageHash, forKey: .imageHash)
+        try container.encode(wasPasted, forKey: .wasPasted)
     }
 }
 
