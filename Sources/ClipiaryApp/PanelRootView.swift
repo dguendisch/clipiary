@@ -191,6 +191,14 @@ struct PanelRootView: View {
                     )
 
                     settingsToggleRow(
+                        title: "Show app icons",
+                        isOn: Binding(
+                            get: { appState.settings.showAppIcons },
+                            set: { appState.settings.showAppIcons = $0 }
+                        )
+                    )
+
+                    settingsToggleRow(
                         title: "Always show search field",
                         isOn: Binding(
                             get: { appState.settings.alwaysShowSearch },
@@ -401,7 +409,7 @@ struct PanelRootView: View {
                 } label: {
                     HStack(alignment: .top, spacing: 8) {
                         ZStack(alignment: .bottomTrailing) {
-                            if let icon = appIcon(for: item.bundleID) {
+                            if appState.settings.showAppIcons, let icon = appIcon(for: item.bundleID) {
                                 Image(nsImage: icon)
                                     .resizable()
                                     .frame(width: 16, height: 16)
@@ -411,7 +419,7 @@ struct PanelRootView: View {
                                     .foregroundStyle(item.isImage ? Color.orange : item.source == .copyOnSelect ? Color.accentColor : .secondary)
                                     .frame(width: 16, height: 16, alignment: .center)
                             }
-                            if item.source == .copyOnSelect {
+                            if appState.settings.showAppIcons, item.source == .copyOnSelect {
                                 Image(systemName: "cursorarrow.rays")
                                     .font(.system(size: 6, weight: .bold))
                                     .foregroundStyle(Color.accentColor)

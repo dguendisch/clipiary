@@ -22,6 +22,7 @@ final class AppSettings {
         static let showItemDetails = "showItemDetails"
         static let alwaysShowSearch = "alwaysShowSearch"
         static let copyOnSelectBufferLimit = "copyOnSelectBufferLimit"
+        static let showAppIcons = "showAppIcons"
     }
 
     private let defaults: UserDefaults
@@ -90,6 +91,10 @@ final class AppSettings {
         didSet { defaults.set(copyOnSelectBufferLimit, forKey: Keys.copyOnSelectBufferLimit) }
     }
 
+    var showAppIcons: Bool {
+        didSet { defaults.set(showAppIcons, forKey: Keys.showAppIcons) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -109,6 +114,7 @@ final class AppSettings {
             Keys.showItemDetails: true,
             Keys.alwaysShowSearch: true,
             Keys.copyOnSelectBufferLimit: 3,
+            Keys.showAppIcons: true,
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -127,6 +133,7 @@ final class AppSettings {
         showItemDetails = defaults.bool(forKey: Keys.showItemDetails)
         alwaysShowSearch = defaults.bool(forKey: Keys.alwaysShowSearch)
         copyOnSelectBufferLimit = defaults.integer(forKey: Keys.copyOnSelectBufferLimit)
+        showAppIcons = defaults.bool(forKey: Keys.showAppIcons)
     }
 
     var globalShortcut: GlobalShortcut {
