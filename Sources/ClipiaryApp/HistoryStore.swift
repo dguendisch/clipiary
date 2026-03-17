@@ -126,6 +126,20 @@ final class HistoryStore {
         persist()
     }
 
+    func setShortcut(_ shortcut: GlobalShortcut, for item: HistoryItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].shortcutKeyCode = Int(shortcut.keyCode)
+        items[index].shortcutModifiers = Int(shortcut.modifiers.rawValue)
+        persist()
+    }
+
+    func removeShortcut(for item: HistoryItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        items[index].shortcutKeyCode = nil
+        items[index].shortcutModifiers = nil
+        persist()
+    }
+
     func seedEntries(for tabConfig: FavoritesTabConfig) {
         guard let entries = tabConfig.entries else { return }
         for entry in entries {

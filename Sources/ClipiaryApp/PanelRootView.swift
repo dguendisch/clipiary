@@ -440,6 +440,18 @@ struct PanelRootView: View {
 
                 Spacer(minLength: 8)
 
+                if let shortcut = item.globalShortcut {
+                    Text(shortcut.displayString)
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .foregroundStyle(.secondary)
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(Color.secondary.opacity(0.12))
+                        )
+                }
+
                 favoriteButton(for: item)
 
                 Button {
@@ -750,9 +762,88 @@ struct PanelRootView: View {
             .onTapGesture {
                 appState.togglePickerMonospace()
             }
+
+            Divider()
+                .padding(.vertical, 2)
+
+            if appState.isRecordingItemShortcut {
+                VStack(spacing: 4) {
+                    HStack(spacing: 6) {
+                        Text("Press shortcut...")
+                            .font(.system(size: 11))
+                        Spacer()
+                        Text("Esc")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    }
+                    .padding(.horizontal, 8)
+                    .padding(.vertical, 4)
+
+                    if let error = appState.itemShortcutError {
+                        Text(error)
+                            .font(.system(size: 10))
+                            .foregroundStyle(.red)
+                            .frame(maxWidth: .infinity, alignment: .leading)
+                            .padding(.horizontal, 8)
+                            .padding(.bottom, 2)
+                    }
+                }
+            } else {
+                HStack(spacing: 6) {
+                    if let shortcut = appState.selectedItem?.globalShortcut {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 11))
+                        Text(shortcut.displayString)
+                            .font(.system(size: 11, weight: .medium))
+                        Spacer()
+                        Text("Del")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                        Text("S")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    } else {
+                        Image(systemName: "keyboard")
+                            .font(.system(size: 11))
+                        Text("Set global shortcut")
+                            .font(.system(size: 11))
+                        Spacer()
+                        Text("S")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    }
+                }
+                .foregroundStyle(appState.selectedItem?.globalShortcut != nil ? .primary : .secondary)
+                .padding(.horizontal, 8)
+                .padding(.vertical, 4)
+                .contentShape(Rectangle())
+                .onTapGesture {
+                    appState.startRecordingItemShortcut()
+                }
+            }
         }
         .padding(10)
-        .frame(width: 220)
+        .frame(width: 240)
         .background(
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .fill(.regularMaterial)

@@ -103,7 +103,7 @@ final class FloatingPanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, appState.showingFavoriteTabPicker {
+        if event.type == .keyDown, appState.showingFavoriteTabPicker, !appState.isRecordingItemShortcut {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if modifiers.isDisjoint(with: [.command, .option, .control]) {
                 switch event.keyCode {
@@ -115,6 +115,10 @@ final class FloatingPanel: NSPanel {
                     appState.confirmPickerSelection()
                 case 46: // M
                     appState.togglePickerMonospace()
+                case 1: // S
+                    appState.startRecordingItemShortcut()
+                case 51: // Delete/Backspace
+                    appState.removeItemShortcut()
                 case 53: // Escape
                     close()
                 default:
@@ -129,6 +133,8 @@ final class FloatingPanel: NSPanel {
     override func close() {
         if appState.showingFavoriteTabPicker {
             appState.showingFavoriteTabPicker = false
+            appState.isRecordingItemShortcut = false
+            appState.itemShortcutError = nil
             return
         }
         super.close()

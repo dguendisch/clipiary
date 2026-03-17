@@ -48,6 +48,9 @@ final class AppState {
     var isPreviewVisible = false
     var showingFavoriteTabPicker = false
     var favoriteTabPickerIndex = 0
+    var isRecordingItemShortcut = false
+    var itemShortcutError: String?
+    private(set) var itemShortcutsChangedID = 0
     private(set) var searchFocusRequestID = 0
     private(set) var popoverOpenRequestID = 0
     private(set) var pasteSelectedRequestID = 0
@@ -281,10 +284,67 @@ final class AppState {
         history.toggleMonospace(item)
     }
 
+    func startRecordingItemShortcut() {
+        isRecordingItemShortcut = true
+        itemShortcutError = nil
+    }
+
+    func removeItemShortcut() {
+        guard let item = selectedItem, item.shortcutKeyCode != nil else { return }
+        history.removeShortcut(for: item)
+        itemShortcutsChangedID &+= 1
+    }
+
+    func updateItemShortcut(from event: NSEvent) {
+        guard let shortcut = GlobalShortcut(event: event) else { return }
+        guard let item = selectedItem else {
+            isRecordingItemShortcut = false
+            return
+        }
+
+        if let collision = shortcutCollision(shortcut, excludingItemID: item.id) {
+            itemShortcutError = collision
+            return
+        }
+
+        history.setShortcut(shortcut, for: item)
+        isRecordingItemShortcut = false
+        itemShortcutError = nil
+        itemShortcutsChangedID &+= 1
+    }
+
+    func requestItemPaste(itemID: UUID) {
+        guard let item = history.items.first(where: { $0.id == itemID }) else { return }
+        history.markAsPasted(item)
+        restore(item)
+        if settings.moveToTopOnPaste {
+            history.moveToTop(item)
+        }
+        quickPasteRequestID &+= 1
+    }
+
+    func shortcutCollision(_ shortcut: GlobalShortcut, excludingItemID: UUID? = nil) -> String? {
+        if shortcut == settings.globalShortcut {
+            return "Already used to open Clipiary"
+        }
+        if shortcut == settings.quickPasteShortcut {
+            return "Already used for quick paste"
+        }
+        for item in history.items where item.id != excludingItemID {
+            if let existing = item.globalShortcut, existing == shortcut {
+                let label = String(item.displayText.prefix(20))
+                return "Already assigned to \"\(label)\""
+            }
+        }
+        return nil
+    }
+
     func deleteSelectedItem() {
         guard let item = selectedItem else {
             return
         }
+
+        let hadShortcut = item.shortcutKeyCode != nil
 
         // Determine the neighbor to select after deletion so the scroll position stays stable.
         let items = activeItems
@@ -297,6 +357,7 @@ final class AppState {
 
         history.delete(item)
         selectedHistoryItemID = neighborID
+        if hadShortcut { itemShortcutsChangedID &+= 1 }
     }
 
     var selectedItem: HistoryItem? {

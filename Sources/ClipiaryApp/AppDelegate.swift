@@ -11,6 +11,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     private var previousApp: NSRunningApplication?
     private let hotKeyManager = GlobalHotKeyManager(id: 1)
     private let quickPasteHotKeyManager = GlobalHotKeyManager(id: 2)
+    private var itemHotKeyManagers: [UUID: GlobalHotKeyManager] = [:]
+    private var nextItemHotKeyID: UInt32 = 10
     private lazy var statusItem: NSStatusItem = {
         let item = NSStatusBar.system.statusItem(withLength: NSStatusItem.variableLength)
         item.behavior = .removalAllowed
@@ -138,13 +140,35 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func updateHotKeyRegistration() {
-        let anyRecording = appState.isRecordingShortcut || appState.isRecordingQuickPasteShortcut
+        let anyRecording = appState.isRecordingShortcut || appState.isRecordingQuickPasteShortcut || appState.isRecordingItemShortcut
         if anyRecording {
             hotKeyManager.unregister()
             quickPasteHotKeyManager.unregister()
+            for (_, mgr) in itemHotKeyManagers { mgr.unregister() }
         } else {
             hotKeyManager.register(shortcut: appState.settings.globalShortcut)
             quickPasteHotKeyManager.register(shortcut: appState.settings.quickPasteShortcut)
+            rebuildItemHotKeys()
+        }
+    }
+
+    private func rebuildItemHotKeys() {
+        for (_, manager) in itemHotKeyManagers {
+            manager.unregister()
+        }
+        itemHotKeyManagers.removeAll()
+
+        for item in appState.history.items {
+            guard let shortcut = item.globalShortcut else { continue }
+            let id = nextItemHotKeyID
+            nextItemHotKeyID += 1
+            let manager = GlobalHotKeyManager(id: id)
+            let itemID = item.id
+            manager.onTrigger = { [weak self] in
+                self?.appState.requestItemPaste(itemID: itemID)
+            }
+            manager.register(shortcut: shortcut)
+            itemHotKeyManagers[item.id] = manager
         }
     }
 
@@ -156,7 +180,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
                 appState.settings.quickPasteHotKeyKeyCode,
                 appState.settings.quickPasteHotKeyModifiers,
                 appState.isRecordingShortcut,
-                appState.isRecordingQuickPasteShortcut
+                appState.isRecordingQuickPasteShortcut,
+                appState.isRecordingItemShortcut,
+                appState.itemShortcutsChangedID
             )
         } onChange: { [weak self] in
             Task { @MainActor [weak self] in
@@ -190,6 +216,17 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         }
 
         let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+
+        if appState.isRecordingItemShortcut {
+            switch event.keyCode {
+            case 53:
+                appState.isRecordingItemShortcut = false
+                appState.itemShortcutError = nil
+            default:
+                appState.updateItemShortcut(from: event)
+            }
+            return suppressKeyUp(for: event)
+        }
 
         if appState.isRecordingShortcut {
             switch event.keyCode {
@@ -320,6 +357,8 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
         statusItem.button?.isHighlighted = false
         appState.isRecordingShortcut = false
         appState.isRecordingQuickPasteShortcut = false
+        appState.isRecordingItemShortcut = false
+        appState.itemShortcutError = nil
         appState.showingFavoriteTabPicker = false
         appState.isPreviewVisible = false
         appState.searchQuery = ""

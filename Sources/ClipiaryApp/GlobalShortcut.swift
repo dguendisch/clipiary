@@ -1,13 +1,18 @@
 import AppKit
 import Carbon.HIToolbox
 
-struct GlobalShortcut: Equatable, Sendable {
+struct GlobalShortcut: Equatable, Hashable, Sendable {
     let keyCode: UInt32
     let modifiers: NSEvent.ModifierFlags
 
     init(keyCode: UInt32, modifiers: NSEvent.ModifierFlags) {
         self.keyCode = keyCode
         self.modifiers = modifiers.intersection(.deviceIndependentFlagsMask)
+    }
+
+    func hash(into hasher: inout Hasher) {
+        hasher.combine(keyCode)
+        hasher.combine(modifiers.rawValue)
     }
 
     init?(event: NSEvent) {

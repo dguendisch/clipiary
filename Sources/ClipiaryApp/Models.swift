@@ -1,3 +1,4 @@
+import AppKit
 import Foundation
 
 enum CaptureSource: String, Codable, Sendable {
@@ -18,6 +19,8 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
     var imageFileName: String?
     var imageHash: String?
     var wasPasted: Bool
+    var shortcutKeyCode: Int?
+    var shortcutModifiers: Int?
 
     init(
         id: UUID = UUID(),
@@ -30,7 +33,9 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         isMonospace: Bool = false,
         imageFileName: String? = nil,
         imageHash: String? = nil,
-        wasPasted: Bool = false
+        wasPasted: Bool = false,
+        shortcutKeyCode: Int? = nil,
+        shortcutModifiers: Int? = nil
     ) {
         self.id = id
         self.text = text
@@ -43,6 +48,8 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         self.imageFileName = imageFileName
         self.imageHash = imageHash
         self.wasPasted = wasPasted
+        self.shortcutKeyCode = shortcutKeyCode
+        self.shortcutModifiers = shortcutModifiers
     }
 
     var isImage: Bool {
@@ -51,6 +58,11 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
 
     var isFavorite: Bool {
         !favoriteTabs.isEmpty
+    }
+
+    var globalShortcut: GlobalShortcut? {
+        guard let keyCode = shortcutKeyCode, let modifiers = shortcutModifiers else { return nil }
+        return GlobalShortcut(keyCode: UInt32(keyCode), modifiers: NSEvent.ModifierFlags(rawValue: UInt(modifiers)))
     }
 
     var displayText: String {
@@ -68,6 +80,7 @@ extension HistoryItem: Codable {
         case monospace
         case imageFileName, imageHash
         case wasPasted
+        case shortcutKeyCode, shortcutModifiers
     }
 
     init(from decoder: Decoder) throws {
@@ -82,6 +95,8 @@ extension HistoryItem: Codable {
         imageFileName = try container.decodeIfPresent(String.self, forKey: .imageFileName)
         imageHash = try container.decodeIfPresent(String.self, forKey: .imageHash)
         wasPasted = (try? container.decode(Bool.self, forKey: .wasPasted)) ?? false
+        shortcutKeyCode = try container.decodeIfPresent(Int.self, forKey: .shortcutKeyCode)
+        shortcutModifiers = try container.decodeIfPresent(Int.self, forKey: .shortcutModifiers)
 
         if let tabs = try? container.decode(Set<String>.self, forKey: .favoriteTabs) {
             favoriteTabs = tabs
@@ -105,6 +120,8 @@ extension HistoryItem: Codable {
         try container.encodeIfPresent(imageFileName, forKey: .imageFileName)
         try container.encodeIfPresent(imageHash, forKey: .imageHash)
         try container.encode(wasPasted, forKey: .wasPasted)
+        try container.encodeIfPresent(shortcutKeyCode, forKey: .shortcutKeyCode)
+        try container.encodeIfPresent(shortcutModifiers, forKey: .shortcutModifiers)
     }
 }
 
