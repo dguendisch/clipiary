@@ -173,6 +173,7 @@ final class HistoryStore {
         }
 
         items[index].createdAt = Date()
+        items[index].sortIndex = nil
         items = recencyOrderedItems(items)
         persist()
     }
@@ -187,6 +188,55 @@ final class HistoryStore {
             return
         }
         items[index].wasPasted = true
+        persist()
+    }
+
+    /// Sorts items using explicit sortIndex when available, falling back to recency.
+    /// Items with nil sortIndex come first (newest first), then items with explicit sortIndex ascending.
+    func customOrderedItems(_ source: [HistoryItem]) -> [HistoryItem] {
+        let withoutIndex = source.filter { $0.sortIndex == nil }.sorted { $0.createdAt > $1.createdAt }
+        let withIndex = source.filter { $0.sortIndex != nil }.sorted { $0.sortIndex! < $1.sortIndex! }
+        return withoutIndex + withIndex
+    }
+
+    /// Assigns explicit sortIndex values to all items in the given list that lack one.
+    func assignSortIndices(to itemIDs: Set<UUID>) {
+        guard !itemIDs.isEmpty else { return }
+        // Collect the items in their current custom order
+        let ordered = customOrderedItems(items.filter { itemIDs.contains($0.id) })
+        for (position, orderedItem) in ordered.enumerated() {
+            if let idx = items.firstIndex(where: { $0.id == orderedItem.id }) {
+                items[idx].sortIndex = Double(position) * 100.0
+            }
+        }
+        persist()
+    }
+
+    /// Moves an item to a new position within a given ordered list of items.
+    func moveItem(_ itemID: UUID, toIndex destinationIndex: Int, inOrderedItems orderedItems: [HistoryItem]) {
+        guard let sourceIndex = orderedItems.firstIndex(where: { $0.id == itemID }) else { return }
+        guard sourceIndex != destinationIndex else { return }
+
+        // Build the list without the dragged item
+        var reordered = orderedItems
+        let moved = reordered.remove(at: sourceIndex)
+        let insertAt = min(destinationIndex, reordered.count)
+
+        let newSortIndex: Double
+        if reordered.isEmpty {
+            newSortIndex = 0.0
+        } else if insertAt == 0 {
+            newSortIndex = (reordered[0].sortIndex ?? 0.0) - 100.0
+        } else if insertAt >= reordered.count {
+            newSortIndex = (reordered[reordered.count - 1].sortIndex ?? 0.0) + 100.0
+        } else {
+            let before = reordered[insertAt - 1].sortIndex ?? 0.0
+            let after = reordered[insertAt].sortIndex ?? (before + 200.0)
+            newSortIndex = (before + after) / 2.0
+        }
+
+        guard let itemIndex = items.firstIndex(where: { $0.id == moved.id }) else { return }
+        items[itemIndex].sortIndex = newSortIndex
         persist()
     }
 

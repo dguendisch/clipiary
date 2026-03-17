@@ -116,7 +116,8 @@ final class AppState {
     }
 
     func favoriteItems(for tabName: String) -> [HistoryItem] {
-        filteredItems().filter { $0.favoriteTabs.contains(tabName) }
+        let tabItems = filteredItems().filter { $0.favoriteTabs.contains(tabName) }
+        return history.customOrderedItems(tabItems)
     }
 
     var activeItems: [HistoryItem] {
@@ -132,9 +133,9 @@ final class AppState {
         let baseItems = filteredItems()
         switch tab.kind {
         case .history:
-            return baseItems
+            return history.customOrderedItems(baseItems)
         case .favorites(let tabName):
-            return baseItems.filter { $0.favoriteTabs.contains(tabName) }
+            return history.customOrderedItems(baseItems.filter { $0.favoriteTabs.contains(tabName) })
         }
     }
 
@@ -337,6 +338,18 @@ final class AppState {
             }
         }
         return nil
+    }
+
+    func reorderItem(_ itemID: HistoryItem.ID, toIndex: Int) {
+        let currentItems = activeItems
+        // Ensure all items in the current view have explicit sortIndex values
+        let needsAssignment = Set(currentItems.filter { $0.sortIndex == nil }.map(\.id))
+        if !needsAssignment.isEmpty {
+            history.assignSortIndices(to: Set(currentItems.map(\.id)))
+        }
+        // Re-fetch after assignment
+        let orderedItems = filteredItems(for: selectedTab)
+        history.moveItem(itemID, toIndex: toIndex, inOrderedItems: orderedItems)
     }
 
     func deleteSelectedItem() {

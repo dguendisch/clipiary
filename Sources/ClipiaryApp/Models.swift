@@ -21,6 +21,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
     var wasPasted: Bool
     var shortcutKeyCode: Int?
     var shortcutModifiers: Int?
+    var sortIndex: Double?
 
     init(
         id: UUID = UUID(),
@@ -35,7 +36,8 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         imageHash: String? = nil,
         wasPasted: Bool = false,
         shortcutKeyCode: Int? = nil,
-        shortcutModifiers: Int? = nil
+        shortcutModifiers: Int? = nil,
+        sortIndex: Double? = nil
     ) {
         self.id = id
         self.text = text
@@ -50,6 +52,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         self.wasPasted = wasPasted
         self.shortcutKeyCode = shortcutKeyCode
         self.shortcutModifiers = shortcutModifiers
+        self.sortIndex = sortIndex
     }
 
     var isImage: Bool {
@@ -81,6 +84,7 @@ extension HistoryItem: Codable {
         case imageFileName, imageHash
         case wasPasted
         case shortcutKeyCode, shortcutModifiers
+        case sortIndex
     }
 
     init(from decoder: Decoder) throws {
@@ -97,6 +101,7 @@ extension HistoryItem: Codable {
         wasPasted = (try? container.decode(Bool.self, forKey: .wasPasted)) ?? false
         shortcutKeyCode = try container.decodeIfPresent(Int.self, forKey: .shortcutKeyCode)
         shortcutModifiers = try container.decodeIfPresent(Int.self, forKey: .shortcutModifiers)
+        sortIndex = try container.decodeIfPresent(Double.self, forKey: .sortIndex)
 
         if let tabs = try? container.decode(Set<String>.self, forKey: .favoriteTabs) {
             favoriteTabs = tabs
@@ -122,6 +127,7 @@ extension HistoryItem: Codable {
         try container.encode(wasPasted, forKey: .wasPasted)
         try container.encodeIfPresent(shortcutKeyCode, forKey: .shortcutKeyCode)
         try container.encodeIfPresent(shortcutModifiers, forKey: .shortcutModifiers)
+        try container.encodeIfPresent(sortIndex, forKey: .sortIndex)
     }
 }
 

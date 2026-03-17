@@ -1,5 +1,6 @@
 import AppKit
 import SwiftUI
+import UniformTypeIdentifiers
 
 @MainActor
 private let appIconCache: NSCache<NSString, NSImage> = {
@@ -34,6 +35,8 @@ struct PanelRootView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var hoveredItemID: HistoryItem.ID?
+    @State private var draggingItemID: HistoryItem.ID?
+    @State private var dropTargetIndex: Int?
     @State private var settingsExpanded = false
     @State private var shortcutsHelpPresented = false
 
@@ -71,6 +74,7 @@ struct PanelRootView: View {
                     .font(.system(size: 13, weight: .semibold))
                 Spacer()
             }
+            .background(WindowDragArea())
 
             tabBar
         }
@@ -394,10 +398,50 @@ struct PanelRootView: View {
 
     private func historyGroup(title: String, items: [HistoryItem]) -> some View {
         LazyVStack(spacing: 2) {
-            ForEach(items) { item in
-                row(for: item)
+            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+                VStack(spacing: 0) {
+                    if dropTargetIndex == index, draggingItemID != item.id {
+                        dropIndicator
+                    }
+                    row(for: item)
+                        .opacity(draggingItemID == item.id ? 0.4 : 1.0)
+                        .onDrag {
+                            draggingItemID = item.id
+                            return NSItemProvider(object: item.id.uuidString as NSString)
+                        }
+                        .onDrop(of: [.plainText], delegate: ReorderDropDelegate(
+                            itemIndex: index,
+                            draggingItemID: $draggingItemID,
+                            dropTargetIndex: $dropTargetIndex,
+                            onReorder: { appState.reorderItem($0, toIndex: $1) }
+                        ))
+                }
+            }
+
+            // Drop zone at the end of the list
+            if draggingItemID != nil {
+                Color.clear
+                    .frame(height: 30)
+                    .onDrop(of: [.plainText], delegate: ReorderDropDelegate(
+                        itemIndex: items.count,
+                        draggingItemID: $draggingItemID,
+                        dropTargetIndex: $dropTargetIndex,
+                        onReorder: { appState.reorderItem($0, toIndex: $1) }
+                    ))
+            }
+
+            if let dropIndex = dropTargetIndex, dropIndex >= items.count, draggingItemID != nil {
+                dropIndicator
             }
         }
+    }
+
+    private var dropIndicator: some View {
+        RoundedRectangle(cornerRadius: 1)
+            .fill(Color.accentColor)
+            .frame(height: 2)
+            .padding(.horizontal, 8)
+            .padding(.vertical, 2)
     }
 
     private func row(for item: HistoryItem) -> some View {
@@ -962,5 +1006,62 @@ private extension NSView {
         if let match = self as? T { results.append(match) }
         for child in subviews { results.append(contentsOf: child.findAll(ofType: type)) }
         return results
+    }
+}
+
+private struct ReorderDropDelegate: DropDelegate {
+    let itemIndex: Int
+    @Binding var draggingItemID: HistoryItem.ID?
+    @Binding var dropTargetIndex: Int?
+    let onReorder: (HistoryItem.ID, Int) -> Void
+
+    func dropEntered(info: DropInfo) {
+        guard draggingItemID != nil else { return }
+        withAnimation(.easeInOut(duration: 0.15)) {
+            dropTargetIndex = itemIndex
+        }
+    }
+
+    func dropUpdated(info: DropInfo) -> DropProposal? {
+        DropProposal(operation: .move)
+    }
+
+    func dropExited(info: DropInfo) {
+        if dropTargetIndex == itemIndex {
+            withAnimation(.easeInOut(duration: 0.15)) {
+                dropTargetIndex = nil
+            }
+        }
+    }
+
+    func performDrop(info: DropInfo) -> Bool {
+        guard let id = draggingItemID else { return false }
+        onReorder(id, itemIndex)
+        draggingItemID = nil
+        dropTargetIndex = nil
+        return true
+    }
+
+    func validateDrop(info: DropInfo) -> Bool {
+        draggingItemID != nil
+    }
+}
+
+private struct WindowDragArea: NSViewRepresentable {
+    func makeNSView(context: Context) -> NSView {
+        let view = WindowDragView()
+        view.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        view.setContentHuggingPriority(.defaultLow, for: .vertical)
+        return view
+    }
+
+    func updateNSView(_ nsView: NSView, context: Context) {}
+}
+
+private final class WindowDragView: NSView {
+    override var mouseDownCanMoveWindow: Bool { true }
+
+    override func mouseDown(with event: NSEvent) {
+        window?.performDrag(with: event)
     }
 }
