@@ -140,15 +140,19 @@ final class AppState {
     }
 
     func filteredItems() -> [HistoryItem] {
-        let query = searchQuery.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !query.isEmpty else {
+        let terms = searchQuery.split(separator: " ", omittingEmptySubsequences: true)
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty }
+        guard !terms.isEmpty else {
             return history.items
         }
 
         return history.items.filter { item in
-            item.text.localizedCaseInsensitiveContains(query) ||
-            item.appName.localizedCaseInsensitiveContains(query) ||
-            (item.bundleID?.localizedCaseInsensitiveContains(query) ?? false)
+            terms.allSatisfy { term in
+                item.text.localizedCaseInsensitiveContains(term) ||
+                item.appName.localizedCaseInsensitiveContains(term) ||
+                (item.bundleID?.localizedCaseInsensitiveContains(term) ?? false)
+            }
         }
     }
 
