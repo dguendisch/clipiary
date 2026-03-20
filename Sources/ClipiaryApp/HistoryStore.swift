@@ -198,6 +198,25 @@ final class HistoryStore {
         persist()
     }
 
+    func removeTabFromAllItems(tabName: String) {
+        var changed = false
+        for i in items.indices where items[i].favoriteTabs.contains(tabName) {
+            items[i].favoriteTabs.remove(tabName)
+            changed = true
+        }
+        if changed { persist() }
+    }
+
+    func renameTabInAllItems(oldName: String, newName: String) {
+        var changed = false
+        for i in items.indices where items[i].favoriteTabs.contains(oldName) {
+            items[i].favoriteTabs.remove(oldName)
+            items[i].favoriteTabs.insert(newName)
+            changed = true
+        }
+        if changed { persist() }
+    }
+
     /// Sorts items using explicit sortIndex when available, falling back to recency.
     /// Items with nil sortIndex come first (newest first), then items with explicit sortIndex ascending.
     func customOrderedItems(_ source: [HistoryItem]) -> [HistoryItem] {

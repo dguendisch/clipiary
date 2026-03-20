@@ -111,6 +111,30 @@ final class AppState {
         return tabs
     }
 
+    func addFavoriteTab(name: String) {
+        configManager.addTab(name: name)
+    }
+
+    func deleteFavoriteTab(name: String) {
+        if case .favorites(let selected) = selectedTab.kind, selected == name {
+            selectedTab = .history
+        }
+        configManager.deleteTab(name: name)
+        history.removeTabFromAllItems(tabName: name)
+    }
+
+    func renameFavoriteTab(oldName: String, newName: String) {
+        if case .favorites(let selected) = selectedTab.kind, selected == oldName {
+            selectedTab = .favorites(newName)
+        }
+        configManager.renameTab(oldName: oldName, newName: newName)
+        history.renameTabInAllItems(oldName: oldName, newName: newName)
+    }
+
+    func moveFavoriteTab(from source: Int, to destination: Int) {
+        configManager.moveTab(from: source, to: destination)
+    }
+
     var historyItems: [HistoryItem] {
         filteredItems(for: .history)
     }

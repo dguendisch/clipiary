@@ -742,6 +742,44 @@ struct PanelRootView: View {
         .frame(maxWidth: .infinity)
         .buttonStyle(.plain)
         .foregroundStyle(isSelected ? .primary : .secondary)
+        .contextMenu {
+            Button("Add New Tab...") {
+                if let name = Self.showTextInputAlert(title: "Add New Tab", message: "Enter a name for the new tab:", defaultValue: "") {
+                    appState.addFavoriteTab(name: name)
+                }
+            }
+
+            if case .favorites(let name) = tab.kind {
+                Button("Rename...") {
+                    if let newName = Self.showTextInputAlert(title: "Rename Tab", message: "Enter a new name:", defaultValue: name) {
+                        if newName != name {
+                            appState.renameFavoriteTab(oldName: name, newName: newName)
+                        }
+                    }
+                }
+
+                let tabs = appState.configManager.favoriteTabs
+                if let index = tabs.firstIndex(where: { $0.name == name }) {
+                    Button("Move Left") {
+                        appState.moveFavoriteTab(from: index, to: index - 1)
+                    }
+                    .disabled(index == 0)
+
+                    Button("Move Right") {
+                        appState.moveFavoriteTab(from: index, to: index + 1)
+                    }
+                    .disabled(index >= tabs.count - 1)
+                }
+
+                Divider()
+
+                Button("Delete", role: .destructive) {
+                    if Self.showDeleteConfirmAlert(tabName: name) {
+                        appState.deleteFavoriteTab(name: name)
+                    }
+                }
+            }
+        }
     }
 
     @ViewBuilder
@@ -1041,6 +1079,35 @@ struct PanelRootView: View {
         .labelsHidden()
         .pickerStyle(.menu)
         .frame(width: width)
+    }
+
+    private static func showTextInputAlert(title: String, message: String, defaultValue: String) -> String? {
+        let alert = NSAlert()
+        alert.messageText = title
+        alert.informativeText = message
+        alert.alertStyle = .informational
+        alert.addButton(withTitle: "OK")
+        alert.addButton(withTitle: "Cancel")
+
+        let textField = NSTextField(frame: NSRect(x: 0, y: 0, width: 260, height: 24))
+        textField.stringValue = defaultValue
+        alert.accessoryView = textField
+        alert.window.initialFirstResponder = textField
+
+        let response = alert.runModal()
+        guard response == .alertFirstButtonReturn else { return nil }
+        let result = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
+        return result.isEmpty ? nil : result
+    }
+
+    private static func showDeleteConfirmAlert(tabName: String) -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Delete \"\(tabName)\"?"
+        alert.informativeText = "Items in this tab will not be deleted, but they will lose their assignment to this tab."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Delete")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private func overrideScrollerStyle() {

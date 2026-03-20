@@ -199,6 +199,10 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
     }
 
     private func handleMonitoredEvent(_ event: NSEvent) -> NSEvent? {
+        guard event.window == panel else {
+            return event
+        }
+
         if shouldSuppressKeyUp(event) {
             return nil
         }
