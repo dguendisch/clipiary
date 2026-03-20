@@ -23,6 +23,7 @@ final class AppSettings {
         static let alwaysShowSearch = "alwaysShowSearch"
         static let copyOnSelectBufferLimit = "copyOnSelectBufferLimit"
         static let showAppIcons = "showAppIcons"
+        static let pasteCountBarScheme = "pasteCountBarScheme"
     }
 
     private let defaults: UserDefaults
@@ -95,6 +96,10 @@ final class AppSettings {
         didSet { defaults.set(showAppIcons, forKey: Keys.showAppIcons) }
     }
 
+    var pasteCountBarScheme: String {
+        didSet { defaults.set(pasteCountBarScheme, forKey: Keys.pasteCountBarScheme) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -115,6 +120,7 @@ final class AppSettings {
             Keys.alwaysShowSearch: true,
             Keys.copyOnSelectBufferLimit: 3,
             Keys.showAppIcons: true,
+            Keys.pasteCountBarScheme: "ocean",
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -134,6 +140,7 @@ final class AppSettings {
         alwaysShowSearch = defaults.bool(forKey: Keys.alwaysShowSearch)
         copyOnSelectBufferLimit = defaults.integer(forKey: Keys.copyOnSelectBufferLimit)
         showAppIcons = defaults.bool(forKey: Keys.showAppIcons)
+        pasteCountBarScheme = defaults.string(forKey: Keys.pasteCountBarScheme) ?? "ocean"
     }
 
     var globalShortcut: GlobalShortcut {

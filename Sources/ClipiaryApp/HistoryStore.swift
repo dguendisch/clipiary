@@ -194,6 +194,7 @@ final class HistoryStore {
             return
         }
         items[index].wasPasted = true
+        items[index].pasteCount += 1
         persist()
     }
 

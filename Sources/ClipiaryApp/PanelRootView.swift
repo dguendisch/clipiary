@@ -210,6 +210,23 @@ struct PanelRootView: View {
                         )
                     )
 
+                    settingMetric(
+                        title: "Paste count bar",
+                        value: nil
+                    ) {
+                        Picker("", selection: Binding(
+                            get: { appState.settings.pasteCountBarScheme },
+                            set: { appState.settings.pasteCountBarScheme = $0 }
+                        )) {
+                            ForEach(PasteCountBarScheme.allSchemes, id: \.id) { scheme in
+                                Text(scheme.label).tag(scheme.id)
+                            }
+                        }
+                        .labelsHidden()
+                        .pickerStyle(.menu)
+                        .frame(width: 130)
+                    }
+
                     settingsToggleRow(
                         title: "Copy on select",
                         isOn: Binding(
@@ -484,32 +501,38 @@ struct PanelRootView: View {
 
                 Spacer(minLength: 8)
 
-                if let shortcut = item.globalShortcut {
-                    Text(shortcut.displayString)
-                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                        .foregroundStyle(.secondary)
-                        .padding(.horizontal, 5)
-                        .padding(.vertical, 2)
-                        .background(
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(Color.secondary.opacity(0.12))
-                        )
-                }
+                HStack(spacing: 8) {
+                    if let shortcut = item.globalShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    }
 
-                favoriteButton(for: item)
+                    if appState.settings.pasteCountBarScheme != "none" {
+                        pasteFrequencyGauge(for: item)
+                    }
 
-                Button {
-                    appState.selectedHistoryItemID = item.id
-                    appState.history.delete(item)
-                    appState.ensureSelection()
-                } label: {
-                    Image(systemName: "xmark")
-                        .font(.system(size: 10, weight: .bold))
-                        .frame(width: 22, height: 22)
+                    favoriteButton(for: item)
+
+                    Button {
+                        appState.selectedHistoryItemID = item.id
+                        appState.history.delete(item)
+                        appState.ensureSelection()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .frame(width: 22, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .opacity(hoveredItemID == item.id ? 1 : 0.45)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.secondary)
-                .opacity(hoveredItemID == item.id ? 1 : 0.45)
             }
 
             if appState.settings.showItemDetails {
@@ -564,6 +587,29 @@ struct PanelRootView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 28)
         .padding(.vertical, 36)
+    }
+
+    private func pasteFrequencyGauge(for item: HistoryItem) -> some View {
+        let scheme = appState.settings.pasteCountBarScheme
+        let colors = PasteCountBarScheme.colors(for: scheme)
+        let maxCount = max(appState.activeItems.map(\.pasteCount).max() ?? 1, 1)
+        let totalSegments = 5
+        let filled = item.pasteCount > 0
+            ? max(1, Int(round(Double(item.pasteCount) / Double(maxCount) * Double(totalSegments))))
+            : 0
+        let tooltipText = item.pasteCount > 0 ? "\(item.pasteCount)x pasted" : "Not yet pasted"
+
+        return HStack(spacing: 1.5) {
+            ForEach(0..<totalSegments, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(index < filled ? colors[index] : Color.secondary.opacity(0.15))
+                    .frame(width: 3, height: 10)
+            }
+        }
+        .opacity(item.pasteCount > 0 ? 1 : 0.75)
+        .overlay(alignment: .top) {
+            QuickTooltip(text: tooltipText)
+        }
     }
 
     private func rowBackground(for item: HistoryItem) -> some View {
@@ -1063,5 +1109,121 @@ private final class WindowDragView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         window?.performDrag(with: event)
+    }
+}
+
+private struct QuickTooltip: View {
+    let text: String
+    @State private var isVisible = false
+    @State private var hoverTask: Task<Void, Never>?
+
+    var body: some View {
+        Color.clear
+            .frame(maxWidth: .infinity, maxHeight: .infinity)
+            .contentShape(Rectangle())
+            .onHover { hovering in
+                hoverTask?.cancel()
+                if hovering {
+                    hoverTask = Task { @MainActor in
+                        try? await Task.sleep(for: .milliseconds(400))
+                        guard !Task.isCancelled else { return }
+                        isVisible = true
+                    }
+                } else {
+                    isVisible = false
+                }
+            }
+            .overlay(alignment: .bottom) {
+                if isVisible {
+                    Text(text)
+                        .font(.system(size: 10, weight: .medium))
+                        .foregroundStyle(.primary)
+                        .padding(.horizontal, 6)
+                        .padding(.vertical, 3)
+                        .background(
+                            RoundedRectangle(cornerRadius: 4, style: .continuous)
+                                .fill(.regularMaterial)
+                                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
+                        )
+                        .fixedSize()
+                        .offset(y: 20)
+                        .transition(.opacity)
+                        .zIndex(100)
+                        .allowsHitTesting(false)
+                }
+            }
+            .animation(.easeInOut(duration: 0.15), value: isVisible)
+    }
+}
+
+enum PasteCountBarScheme {
+    struct Scheme {
+        let id: String
+        let label: String
+        let colors: [Color]
+    }
+
+    static let allSchemes: [Scheme] = [
+        Scheme(id: "none", label: "No bar", colors: []),
+        Scheme(id: "neon", label: "Neon", colors: [
+            Color(red: 0.40, green: 0.40, blue: 0.95),
+            Color(red: 0.60, green: 0.30, blue: 0.85),
+            Color(red: 0.90, green: 0.20, blue: 0.75),
+            Color(red: 0.95, green: 0.35, blue: 0.55),
+            Color(red: 0.95, green: 0.60, blue: 0.30),
+        ]),
+        Scheme(id: "ocean", label: "Ocean", colors: [
+            Color(red: 0.10, green: 0.50, blue: 0.70),
+            Color(red: 0.15, green: 0.60, blue: 0.75),
+            Color(red: 0.20, green: 0.72, blue: 0.80),
+            Color(red: 0.30, green: 0.82, blue: 0.82),
+            Color(red: 0.45, green: 0.92, blue: 0.85),
+        ]),
+        Scheme(id: "sunset", label: "Sunset", colors: [
+            Color(red: 0.95, green: 0.85, blue: 0.25),
+            Color(red: 0.97, green: 0.65, blue: 0.20),
+            Color(red: 0.95, green: 0.45, blue: 0.20),
+            Color(red: 0.90, green: 0.25, blue: 0.25),
+            Color(red: 0.70, green: 0.15, blue: 0.30),
+        ]),
+        Scheme(id: "forest", label: "Forest", colors: [
+            Color(red: 0.20, green: 0.55, blue: 0.25),
+            Color(red: 0.30, green: 0.65, blue: 0.30),
+            Color(red: 0.45, green: 0.75, blue: 0.35),
+            Color(red: 0.60, green: 0.82, blue: 0.40),
+            Color(red: 0.78, green: 0.90, blue: 0.50),
+        ]),
+        Scheme(id: "ember", label: "Ember", colors: [
+            Color(red: 0.55, green: 0.10, blue: 0.10),
+            Color(red: 0.75, green: 0.18, blue: 0.10),
+            Color(red: 0.90, green: 0.35, blue: 0.10),
+            Color(red: 0.97, green: 0.55, blue: 0.15),
+            Color(red: 1.00, green: 0.78, blue: 0.25),
+        ]),
+        Scheme(id: "aurora", label: "Aurora", colors: [
+            Color(red: 0.10, green: 0.85, blue: 0.55),
+            Color(red: 0.20, green: 0.70, blue: 0.75),
+            Color(red: 0.35, green: 0.50, blue: 0.90),
+            Color(red: 0.55, green: 0.35, blue: 0.90),
+            Color(red: 0.75, green: 0.25, blue: 0.85),
+        ]),
+        Scheme(id: "monochrome", label: "Monochrome", colors: [
+            Color(white: 0.40),
+            Color(white: 0.50),
+            Color(white: 0.60),
+            Color(white: 0.72),
+            Color(white: 0.85),
+        ]),
+        Scheme(id: "candy", label: "Candy", colors: [
+            Color(red: 0.95, green: 0.40, blue: 0.60),
+            Color(red: 0.85, green: 0.35, blue: 0.80),
+            Color(red: 0.65, green: 0.40, blue: 0.95),
+            Color(red: 0.45, green: 0.55, blue: 0.95),
+            Color(red: 0.35, green: 0.80, blue: 0.95),
+        ]),
+    ]
+
+    static func colors(for schemeID: String) -> [Color] {
+        allSchemes.first { $0.id == schemeID }?.colors ?? allSchemes[1].colors
     }
 }

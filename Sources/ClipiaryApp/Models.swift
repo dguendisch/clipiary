@@ -19,6 +19,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
     var imageFileName: String?
     var imageHash: String?
     var wasPasted: Bool
+    var pasteCount: Int
     var shortcutKeyCode: Int?
     var shortcutModifiers: Int?
     var sortIndex: Double?
@@ -35,6 +36,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         imageFileName: String? = nil,
         imageHash: String? = nil,
         wasPasted: Bool = false,
+        pasteCount: Int = 0,
         shortcutKeyCode: Int? = nil,
         shortcutModifiers: Int? = nil,
         sortIndex: Double? = nil
@@ -50,6 +52,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         self.imageFileName = imageFileName
         self.imageHash = imageHash
         self.wasPasted = wasPasted
+        self.pasteCount = pasteCount
         self.shortcutKeyCode = shortcutKeyCode
         self.shortcutModifiers = shortcutModifiers
         self.sortIndex = sortIndex
@@ -83,6 +86,7 @@ extension HistoryItem: Codable {
         case monospace
         case imageFileName, imageHash
         case wasPasted
+        case pasteCount
         case shortcutKeyCode, shortcutModifiers
         case sortIndex
     }
@@ -99,6 +103,7 @@ extension HistoryItem: Codable {
         imageFileName = try container.decodeIfPresent(String.self, forKey: .imageFileName)
         imageHash = try container.decodeIfPresent(String.self, forKey: .imageHash)
         wasPasted = (try? container.decode(Bool.self, forKey: .wasPasted)) ?? false
+        pasteCount = (try? container.decode(Int.self, forKey: .pasteCount)) ?? 0
         shortcutKeyCode = try container.decodeIfPresent(Int.self, forKey: .shortcutKeyCode)
         shortcutModifiers = try container.decodeIfPresent(Int.self, forKey: .shortcutModifiers)
         sortIndex = try container.decodeIfPresent(Double.self, forKey: .sortIndex)
@@ -125,6 +130,7 @@ extension HistoryItem: Codable {
         try container.encodeIfPresent(imageFileName, forKey: .imageFileName)
         try container.encodeIfPresent(imageHash, forKey: .imageHash)
         try container.encode(wasPasted, forKey: .wasPasted)
+        try container.encode(pasteCount, forKey: .pasteCount)
         try container.encodeIfPresent(shortcutKeyCode, forKey: .shortcutKeyCode)
         try container.encodeIfPresent(shortcutModifiers, forKey: .shortcutModifiers)
         try container.encodeIfPresent(sortIndex, forKey: .sortIndex)

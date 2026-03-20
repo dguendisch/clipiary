@@ -10,7 +10,7 @@ Clipiary is a macOS clipboard manager with an opt-in global copy-on-select mode.
 
 Build the Swift package (isolated module caches):
 ```sh
-swift build
+/usr/bin/swift build
 ```
 
 Build an app bundle at `dist/Clipiary.app`:
