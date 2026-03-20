@@ -5,7 +5,7 @@ import UniformTypeIdentifiers
 @MainActor
 private let appIconCache: NSCache<NSString, NSImage> = {
     let cache = NSCache<NSString, NSImage>()
-    cache.countLimit = 50
+    cache.countLimit = 100
     return cache
 }()
 
@@ -34,7 +34,6 @@ struct PanelRootView: View {
 
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
-    @State private var hoveredItemID: HistoryItem.ID?
     @State private var draggingItemID: HistoryItem.ID?
     @State private var dropTargetIndex: Int?
     @State private var settingsExpanded = false
@@ -89,7 +88,9 @@ struct PanelRootView: View {
     }
 
     private var historySection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        let items = appState.activeItems
+
+        return VStack(alignment: .leading, spacing: 10) {
             searchField
                 .frame(height: appState.settings.alwaysShowSearch || !appState.searchQuery.isEmpty ? nil : 0)
                 .clipped()
@@ -97,21 +98,27 @@ struct PanelRootView: View {
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        if appState.activeItems.isEmpty {
+                        if items.isEmpty {
                             emptyState
                         } else {
-                            switch appState.selectedTab.kind {
-                            case .history:
-                                historyGroup(title: "Recent Copies", items: appState.historyItems)
-                            case .favorites(let name):
-                                historyGroup(title: name, items: appState.favoriteItems(for: name))
-                            }
+                            historyGroup(title: "", items: items)
                         }
                     }
                     .padding(10)
                 }
                 .scrollIndicators(.hidden)
                 .onAppear { overrideScrollerStyle() }
+                .popover(
+                    isPresented: Binding(
+                        get: { appState.isPreviewVisible && appState.selectedItem != nil },
+                        set: { if !$0 { appState.isPreviewVisible = false } }
+                    ),
+                    arrowEdge: .trailing
+                ) {
+                    if let item = appState.selectedItem {
+                        itemPreview(for: item)
+                    }
+                }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(
                     RoundedRectangle(cornerRadius: 12, style: .continuous)
@@ -422,24 +429,45 @@ struct PanelRootView: View {
     }
 
     private func historyGroup(title: String, items: [HistoryItem]) -> some View {
-        LazyVStack(spacing: 2) {
-            ForEach(Array(items.enumerated()), id: \.element.id) { index, item in
+        let maxPasteCount = max(items.map(\.pasteCount).max() ?? 1, 1)
+        let showAppIcons = appState.settings.showAppIcons
+        let showItemDetails = appState.settings.showItemDetails
+        let pasteCountBarScheme = appState.settings.pasteCountBarScheme
+        let singleFavoriteTab = appState.configManager.favoriteTabs.count == 1
+        let singleFavoriteTabName = singleFavoriteTab ? appState.configManager.favoriteTabs.first?.name : nil
+        let selectedID = appState.selectedHistoryItemID
+        let showingPicker = appState.showingFavoriteTabPicker
+        let indexedItems = items.enumerated().map { ($0.offset, $0.element) }
+
+        return LazyVStack(spacing: 2) {
+            ForEach(indexedItems, id: \.1.id) { index, item in
                 VStack(spacing: 0) {
                     if dropTargetIndex == index, draggingItemID != item.id {
                         dropIndicator
                     }
-                    row(for: item)
-                        .opacity(draggingItemID == item.id ? 0.4 : 1.0)
-                        .onDrag {
-                            draggingItemID = item.id
-                            return NSItemProvider(object: item.id.uuidString as NSString)
-                        }
-                        .onDrop(of: [.plainText], delegate: ReorderDropDelegate(
-                            itemIndex: index,
-                            draggingItemID: $draggingItemID,
-                            dropTargetIndex: $dropTargetIndex,
-                            onReorder: { appState.reorderItem($0, toIndex: $1) }
-                        ))
+                    HistoryRowView(
+                        item: item,
+                        maxPasteCount: maxPasteCount,
+                        isSelected: selectedID == item.id,
+                        showAppIcons: showAppIcons,
+                        showItemDetails: showItemDetails,
+                        pasteCountBarScheme: pasteCountBarScheme,
+                        singleFavoriteTab: singleFavoriteTab,
+                        singleFavoriteTabName: singleFavoriteTabName,
+                        showingFavoriteTabPicker: showingPicker && selectedID == item.id,
+                        appState: appState
+                    )
+                    .opacity(draggingItemID == item.id ? 0.4 : 1.0)
+                    .onDrag {
+                        draggingItemID = item.id
+                        return NSItemProvider(object: item.id.uuidString as NSString)
+                    }
+                    .onDrop(of: [.plainText], delegate: ReorderDropDelegate(
+                        itemIndex: index,
+                        draggingItemID: $draggingItemID,
+                        dropTargetIndex: $dropTargetIndex,
+                        onReorder: { appState.reorderItem($0, toIndex: $1) }
+                    ))
                 }
             }
 
@@ -469,117 +497,6 @@ struct PanelRootView: View {
             .padding(.vertical, 2)
     }
 
-    private func row(for item: HistoryItem) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            HStack(alignment: .top, spacing: 8) {
-                Button {
-                    appState.selectedHistoryItemID = item.id
-                    appState.restore(item)
-                } label: {
-                    HStack(alignment: .top, spacing: 8) {
-                        ZStack(alignment: .bottomTrailing) {
-                            if appState.settings.showAppIcons, let icon = appIcon(for: item.bundleID) {
-                                Image(nsImage: icon)
-                                    .resizable()
-                                    .frame(width: 16, height: 16)
-                            } else {
-                                Image(systemName: item.isImage ? "photo" : item.source == .copyOnSelect ? "cursorarrow.rays" : "doc.on.doc")
-                                    .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(item.isImage ? Color.orange : item.source == .copyOnSelect ? Color.accentColor : .secondary)
-                                    .frame(width: 16, height: 16, alignment: .center)
-                            }
-                            if appState.settings.showAppIcons, item.source == .copyOnSelect {
-                                Image(systemName: "cursorarrow.rays")
-                                    .font(.system(size: 6, weight: .bold))
-                                    .foregroundStyle(Color.accentColor)
-                                    .offset(x: 4, y: 4)
-                            }
-                        }
-
-                        Text(item.displayText.isEmpty ? "Untitled" : item.displayText)
-                            .font(item.isMonospace
-                                ? .system(size: 12, design: .monospaced)
-                                : .system(size: 13))
-                            .foregroundStyle(.primary)
-                            .lineLimit(2)
-                            .multilineTextAlignment(.leading)
-                    }
-                }
-                .buttonStyle(.plain)
-
-                Spacer(minLength: 8)
-
-                HStack(spacing: 8) {
-                    if let shortcut = item.globalShortcut {
-                        Text(shortcut.displayString)
-                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
-                            .foregroundStyle(.secondary)
-                            .padding(.horizontal, 5)
-                            .padding(.vertical, 2)
-                            .background(
-                                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(Color.secondary.opacity(0.12))
-                            )
-                    }
-
-                    if appState.settings.pasteCountBarScheme != "none" {
-                        pasteFrequencyGauge(for: item)
-                    }
-
-                    favoriteButton(for: item)
-
-                    Button {
-                        appState.selectedHistoryItemID = item.id
-                        appState.history.delete(item)
-                        appState.ensureSelection()
-                    } label: {
-                        Image(systemName: "xmark")
-                            .font(.system(size: 10, weight: .bold))
-                            .frame(width: 22, height: 22)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(.secondary)
-                    .opacity(hoveredItemID == item.id ? 1 : 0.45)
-                }
-            }
-
-            if appState.settings.showItemDetails {
-                HStack(spacing: 6) {
-                    Text(item.appName)
-                    Text(item.source == .copyOnSelect ? "Selection" : "Clipboard")
-                    Text(item.createdAt.formatted(date: .omitted, time: .shortened))
-                }
-                .font(.system(size: 10, weight: .medium))
-                .foregroundStyle(.secondary)
-                .padding(.leading, 22)
-            }
-        }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .id(item.id)
-        .anchorPreference(key: SelectedRowAnchorKey.self, value: .bounds) { anchor in
-            appState.showingFavoriteTabPicker && appState.selectedHistoryItemID == item.id ? anchor : nil
-        }
-        .background(rowBackground(for: item))
-        .contentShape(Rectangle())
-        .onTapGesture {
-            appState.selectedHistoryItemID = item.id
-        }
-        .onHover { isHovered in
-            hoveredItemID = isHovered ? item.id : (hoveredItemID == item.id ? nil : hoveredItemID)
-        }
-        .popover(
-            isPresented: Binding(
-                get: { appState.isPreviewVisible && appState.selectedHistoryItemID == item.id },
-                set: { _ in }
-            ),
-            arrowEdge: .trailing
-        ) {
-            itemPreview(for: item)
-        }
-    }
-
     private var emptyState: some View {
         VStack(spacing: 8) {
             Image(systemName: "doc.on.clipboard")
@@ -595,34 +512,6 @@ struct PanelRootView: View {
         .frame(maxWidth: .infinity)
         .padding(.horizontal, 28)
         .padding(.vertical, 36)
-    }
-
-    private func pasteFrequencyGauge(for item: HistoryItem) -> some View {
-        let scheme = appState.settings.pasteCountBarScheme
-        let colors = PasteCountBarScheme.colors(for: scheme)
-        let maxCount = max(appState.activeItems.map(\.pasteCount).max() ?? 1, 1)
-        let totalSegments = 5
-        let filled = item.pasteCount > 0
-            ? max(1, Int(round(Double(item.pasteCount) / Double(maxCount) * Double(totalSegments))))
-            : 0
-        let tooltipText = item.pasteCount > 0 ? "\(item.pasteCount)x pasted" : "Not yet pasted"
-
-        return HStack(spacing: 1.5) {
-            ForEach(0..<totalSegments, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(index < filled ? colors[index] : Color.secondary.opacity(0.15))
-                    .frame(width: 3, height: 10)
-            }
-        }
-        .opacity(item.pasteCount > 0 ? 1 : 0.75)
-        .overlay(alignment: .top) {
-            QuickTooltip(text: tooltipText)
-        }
-    }
-
-    private func rowBackground(for item: HistoryItem) -> some View {
-        RoundedRectangle(cornerRadius: 8, style: .continuous)
-            .fill(rowFill(for: item))
     }
 
     private func itemPreview(for item: HistoryItem) -> some View {
@@ -674,10 +563,6 @@ struct PanelRootView: View {
 
     private var panelFill: Color {
         Color(nsColor: .controlBackgroundColor).opacity(0.85)
-    }
-
-    private var hoverFill: Color {
-        Color.accentColor.opacity(0.09)
     }
 
     private var emptyMessage: String {
@@ -779,37 +664,6 @@ struct PanelRootView: View {
                     }
                 }
             }
-        }
-    }
-
-    @ViewBuilder
-    private func favoriteButton(for item: HistoryItem) -> some View {
-        if appState.configManager.favoriteTabs.count == 1 {
-            Button {
-                appState.selectedHistoryItemID = item.id
-                let tabName = appState.configManager.favoriteTabs[0].name
-                appState.toggleFavoriteTab(item, tabName: tabName)
-                appState.ensureSelection()
-            } label: {
-                Image(systemName: item.isFavorite ? "star.fill" : "star")
-                    .font(.system(size: 11, weight: .medium))
-                    .frame(width: 22, height: 22)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
-            .opacity(hoveredItemID == item.id || item.isFavorite ? 1 : 0.55)
-        } else {
-            Button {
-                appState.selectedHistoryItemID = item.id
-                appState.toggleFavoriteSelectedItem()
-            } label: {
-                Image(systemName: item.isFavorite ? "star.fill" : "star")
-                    .font(.system(size: 11, weight: .medium))
-                    .frame(width: 22, height: 22)
-            }
-            .buttonStyle(.plain)
-            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
-            .opacity(hoveredItemID == item.id || item.isFavorite ? 1 : 0.55)
         }
     }
 
@@ -991,18 +845,6 @@ struct PanelRootView: View {
         )
     }
 
-    private func rowFill(for item: HistoryItem) -> Color {
-        if appState.selectedHistoryItemID == item.id {
-            return Color.accentColor.opacity(0.18)
-        }
-
-        if hoveredItemID == item.id {
-            return hoverFill
-        }
-
-        return .clear
-    }
-
     private func settingMetric<Control: View>(title: String, value: String?, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 8) {
             VStack(alignment: .leading, spacing: 2) {
@@ -1130,6 +972,187 @@ private extension NSView {
     }
 }
 
+private struct HistoryRowView: View {
+    let item: HistoryItem
+    let maxPasteCount: Int
+    let isSelected: Bool
+    let showAppIcons: Bool
+    let showItemDetails: Bool
+    let pasteCountBarScheme: String
+    let singleFavoriteTab: Bool
+    let singleFavoriteTabName: String?
+    let showingFavoriteTabPicker: Bool
+    let appState: AppState
+
+    @State private var isHovered = false
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .top, spacing: 8) {
+                Button {
+                    appState.selectedHistoryItemID = item.id
+                    appState.restore(item)
+                } label: {
+                    HStack(alignment: .top, spacing: 8) {
+                        ZStack(alignment: .bottomTrailing) {
+                            if showAppIcons, let icon = appIcon(for: item.bundleID) {
+                                Image(nsImage: icon)
+                                    .resizable()
+                                    .frame(width: 16, height: 16)
+                            } else {
+                                Image(systemName: item.isImage ? "photo" : item.source == .copyOnSelect ? "cursorarrow.rays" : "doc.on.doc")
+                                    .font(.system(size: 11, weight: .semibold))
+                                    .foregroundStyle(item.isImage ? Color.orange : item.source == .copyOnSelect ? Color.accentColor : .secondary)
+                                    .frame(width: 16, height: 16, alignment: .center)
+                            }
+                            if showAppIcons, item.source == .copyOnSelect {
+                                Image(systemName: "cursorarrow.rays")
+                                    .font(.system(size: 6, weight: .bold))
+                                    .foregroundStyle(Color.accentColor)
+                                    .offset(x: 4, y: 4)
+                            }
+                        }
+
+                        Text(item.displayText.isEmpty ? "Untitled" : item.displayText)
+                            .font(item.isMonospace
+                                ? .system(size: 12, design: .monospaced)
+                                : .system(size: 13))
+                            .foregroundStyle(.primary)
+                            .lineLimit(2)
+                            .multilineTextAlignment(.leading)
+                    }
+                }
+                .buttonStyle(.plain)
+
+                Spacer(minLength: 8)
+
+                HStack(spacing: 8) {
+                    if let shortcut = item.globalShortcut {
+                        Text(shortcut.displayString)
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .foregroundStyle(.secondary)
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                    .fill(Color.secondary.opacity(0.12))
+                            )
+                    }
+
+                    if pasteCountBarScheme != "none" {
+                        pasteFrequencyGauge
+                    }
+
+                    favoriteButton
+
+                    Button {
+                        appState.selectedHistoryItemID = item.id
+                        appState.history.delete(item)
+                        appState.ensureSelection()
+                    } label: {
+                        Image(systemName: "xmark")
+                            .font(.system(size: 10, weight: .bold))
+                            .frame(width: 22, height: 22)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.secondary)
+                    .opacity(isHovered ? 1 : 0.45)
+                }
+            }
+
+            if showItemDetails {
+                HStack(spacing: 6) {
+                    Text(item.appName)
+                    Text(item.source == .copyOnSelect ? "Selection" : "Clipboard")
+                    Text(item.createdAt.formatted(date: .omitted, time: .shortened))
+                }
+                .font(.system(size: 10, weight: .medium))
+                .foregroundStyle(.secondary)
+                .padding(.leading, 22)
+            }
+        }
+        .padding(.horizontal, 8)
+        .padding(.vertical, 8)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .id(item.id)
+        .anchorPreference(key: SelectedRowAnchorKey.self, value: .bounds) { anchor in
+            showingFavoriteTabPicker ? anchor : nil
+        }
+        .background(
+            RoundedRectangle(cornerRadius: 8, style: .continuous)
+                .fill(rowFill)
+        )
+        .contentShape(Rectangle())
+        .onTapGesture {
+            appState.selectedHistoryItemID = item.id
+        }
+        .onHover { hovering in
+            isHovered = hovering
+        }
+    }
+
+    private var rowFill: Color {
+        if isSelected {
+            return Color.accentColor.opacity(0.18)
+        }
+        if isHovered {
+            return Color.accentColor.opacity(0.09)
+        }
+        return .clear
+    }
+
+    private var pasteFrequencyGauge: some View {
+        let colors = PasteCountBarScheme.colors(for: pasteCountBarScheme)
+        let totalSegments = 5
+        let filled = item.pasteCount > 0
+            ? max(1, Int(round(Double(item.pasteCount) / Double(maxPasteCount) * Double(totalSegments))))
+            : 0
+        let tooltipText = item.pasteCount > 0 ? "\(item.pasteCount)x pasted" : "Not yet pasted"
+
+        return HStack(spacing: 1.5) {
+            ForEach(0..<totalSegments, id: \.self) { index in
+                RoundedRectangle(cornerRadius: 1)
+                    .fill(index < filled ? colors[index] : Color.secondary.opacity(0.15))
+                    .frame(width: 3, height: 10)
+            }
+        }
+        .opacity(item.pasteCount > 0 ? 1 : 0.75)
+        .padding(.vertical, 4)
+        .contentShape(Rectangle())
+        .help(tooltipText)
+    }
+
+    @ViewBuilder
+    private var favoriteButton: some View {
+        if singleFavoriteTab, let tabName = singleFavoriteTabName {
+            Button {
+                appState.selectedHistoryItemID = item.id
+                appState.toggleFavoriteTab(item, tabName: tabName)
+                appState.ensureSelection()
+            } label: {
+                Image(systemName: item.isFavorite ? "star.fill" : "star")
+                    .font(.system(size: 11, weight: .medium))
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
+            .opacity(isHovered || item.isFavorite ? 1 : 0.55)
+        } else {
+            Button {
+                appState.selectedHistoryItemID = item.id
+                appState.toggleFavoriteSelectedItem()
+            } label: {
+                Image(systemName: item.isFavorite ? "star.fill" : "star")
+                    .font(.system(size: 11, weight: .medium))
+                    .frame(width: 22, height: 22)
+            }
+            .buttonStyle(.plain)
+            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
+            .opacity(isHovered || item.isFavorite ? 1 : 0.55)
+        }
+    }
+}
+
 private struct ReorderDropDelegate: DropDelegate {
     let itemIndex: Int
     @Binding var draggingItemID: HistoryItem.ID?
@@ -1184,50 +1207,6 @@ private final class WindowDragView: NSView {
 
     override func mouseDown(with event: NSEvent) {
         window?.performDrag(with: event)
-    }
-}
-
-private struct QuickTooltip: View {
-    let text: String
-    @State private var isVisible = false
-    @State private var hoverTask: Task<Void, Never>?
-
-    var body: some View {
-        Color.clear
-            .frame(maxWidth: .infinity, maxHeight: .infinity)
-            .contentShape(Rectangle())
-            .onHover { hovering in
-                hoverTask?.cancel()
-                if hovering {
-                    hoverTask = Task { @MainActor in
-                        try? await Task.sleep(for: .milliseconds(400))
-                        guard !Task.isCancelled else { return }
-                        isVisible = true
-                    }
-                } else {
-                    isVisible = false
-                }
-            }
-            .overlay(alignment: .bottom) {
-                if isVisible {
-                    Text(text)
-                        .font(.system(size: 10, weight: .medium))
-                        .foregroundStyle(.primary)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 3)
-                        .background(
-                            RoundedRectangle(cornerRadius: 4, style: .continuous)
-                                .fill(.regularMaterial)
-                                .shadow(color: .black.opacity(0.15), radius: 3, y: 1)
-                        )
-                        .fixedSize()
-                        .offset(y: 20)
-                        .transition(.opacity)
-                        .zIndex(100)
-                        .allowsHitTesting(false)
-                }
-            }
-            .animation(.easeInOut(duration: 0.15), value: isVisible)
     }
 }
 

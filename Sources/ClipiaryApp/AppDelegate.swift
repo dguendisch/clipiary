@@ -31,6 +31,7 @@ final class AppDelegate: NSObject, NSApplicationDelegate {
 
     func applicationWillFinishLaunching(_ notification: Notification) {
         NSApplication.shared.setActivationPolicy(.accessory)
+        UserDefaults.standard.set(200, forKey: "NSInitialToolTipDelay")
         appState.start()
         configureCommandMenu()
         configurePanel()
