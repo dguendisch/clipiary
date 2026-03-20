@@ -101,6 +101,10 @@ final class FloatingPanel: NSPanel {
 
     override func resignKey() {
         super.resignKey()
+        // Don't close if the settings window is taking focus.
+        if SettingsWindowController.shared.isVisible {
+            return
+        }
         // Don't close if the mouse is near the panel frame —
         // the user is resizing or dragging, not clicking away.
         // Inset by -6 to cover corner resize handles that sit at the frame edge.
@@ -136,6 +140,13 @@ final class FloatingPanel: NSPanel {
                 return
             }
         }
+        // Cmd+, opens settings — intercept before super to prevent beep
+        if event.type == .keyDown,
+           event.modifierFlags.intersection(.deviceIndependentFlagsMask) == .command,
+           event.keyCode == 43 {
+            SettingsWindowController.shared.open()
+            return
+        }
         super.sendEvent(event)
     }
 
@@ -146,6 +157,7 @@ final class FloatingPanel: NSPanel {
             appState.itemShortcutError = nil
             return
         }
+        SettingsWindowController.shared.close()
         super.close()
         statusBarButton?.isHighlighted = false
         onClose?()
