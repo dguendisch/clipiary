@@ -33,7 +33,7 @@ You can configure the amount of latest copy-on-select items that should be kept 
 
 ### Custom Favorites Tabs
 
-By default there is a single "Favorites" tab. You can configure multiple named favorites tabs by creating a config file at:
+By default there is a single "Favorites" tab. You can configure multiple named favorites tabs either by right-clicking a tab or by creating a config file at:
 
 ```
 ~/Library/Application Support/Clipiary/config.json
@@ -43,9 +43,21 @@ Example (see [docs/config.example.json](docs/config.example.json) for a full tem
 
 ```json
 {
-  "favorites": [
-    { "name": "Snippets" },
-    { "name": "Shell", "entries": ["git status", "docker ps"] }
+  "favorites" : [
+    {
+      "name" : "Snippets",
+      "entries" : [
+        { "text" : "alias l='ls -al --color=auto'", "monospace" : true },
+        { "text" : "<details><summary>blabla<\/summary><p>\n\n```\n```\n\n<\/p><\/details>", "monospace" : true }
+      ],
+    },
+    {
+      "name" : "Templates"
+      "entries" : [
+        { "text" : "Best Regards,\nFoo" },
+        ...
+      ],
+    }
   ]
 }
 ```
