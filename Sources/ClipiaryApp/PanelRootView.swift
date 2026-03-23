@@ -27,12 +27,21 @@ private struct SelectedRowAnchorKey: PreferenceKey {
     }
 }
 
+private struct SelectedRowRectKey: PreferenceKey {
+    static let defaultValue: CGRect = .zero
+    static func reduce(value: inout CGRect, nextValue: () -> CGRect) {
+        let next = nextValue()
+        if next != .zero { value = next }
+    }
+}
+
 struct PanelRootView: View {
     @Environment(AppState.self) private var appState
     @FocusState private var searchFocused: Bool
     @State private var draggingItemID: HistoryItem.ID?
     @State private var dropTargetIndex: Int?
     @State private var shortcutsHelpPresented = false
+    @State private var selectedRowRect: CGRect = .zero
 
     var body: some View {
         VStack(spacing: 12) {
@@ -96,15 +105,21 @@ struct PanelRootView: View {
                 }
                 .scrollIndicators(.hidden)
                 .onAppear { overrideScrollerStyle() }
-                .popover(
-                    isPresented: Binding(
-                        get: { appState.isPreviewVisible && appState.selectedItem != nil },
-                        set: { if !$0 { appState.isPreviewVisible = false } }
-                    ),
-                    arrowEdge: .trailing
-                ) {
-                    if let item = appState.selectedItem {
-                        itemPreview(for: item)
+                .coordinateSpace(name: "scrollArea")
+                .onPreferenceChange(SelectedRowRectKey.self) { rect in
+                    selectedRowRect = rect
+                }
+                .overlay {
+                    if appState.isPreviewVisible, let item = appState.selectedItem {
+                        Color.clear
+                            .popover(
+                                isPresented: .constant(true),
+                                attachmentAnchor: .rect(.rect(selectedRowRect)),
+                                arrowEdge: .trailing
+                            ) {
+                                itemPreview(for: item)
+                            }
+                            .id(item.id)
                     }
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
@@ -305,23 +320,6 @@ struct PanelRootView: View {
             .padding(.vertical, 2)
     }
 
-    private var emptyState: some View {
-        VStack(spacing: 8) {
-            Image(systemName: "doc.on.clipboard")
-                .font(.system(size: 18, weight: .medium))
-                .foregroundStyle(.secondary)
-            Text(emptyTitle)
-                .font(.system(size: 13, weight: .medium))
-            Text(emptyMessage)
-                .font(.system(size: 11))
-                .foregroundStyle(.secondary)
-                .multilineTextAlignment(.center)
-        }
-        .frame(maxWidth: .infinity)
-        .padding(.horizontal, 28)
-        .padding(.vertical, 36)
-    }
-
     private func itemPreview(for item: HistoryItem) -> some View {
         Group {
             if item.isImage, let nsImage = appState.history.loadImage(for: item) {
@@ -340,6 +338,23 @@ struct PanelRootView: View {
             }
         }
         .frame(idealWidth: 500, maxHeight: 600)
+    }
+
+    private var emptyState: some View {
+        VStack(spacing: 8) {
+            Image(systemName: "doc.on.clipboard")
+                .font(.system(size: 18, weight: .medium))
+                .foregroundStyle(.secondary)
+            Text(emptyTitle)
+                .font(.system(size: 13, weight: .medium))
+            Text(emptyMessage)
+                .font(.system(size: 11))
+                .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
+        }
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 28)
+        .padding(.vertical, 36)
     }
 
     private var shortcutsHelpPopover: some View {
@@ -842,7 +857,15 @@ private struct HistoryRowView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .id(item.id)
         .anchorPreference(key: SelectedRowAnchorKey.self, value: .bounds) { anchor in
-            showingFavoriteTabPicker ? anchor : nil
+            isSelected ? anchor : nil
+        }
+        .background {
+            if isSelected {
+                GeometryReader { geo in
+                    Color.clear
+                        .preference(key: SelectedRowRectKey.self, value: geo.frame(in: .named("scrollArea")))
+                }
+            }
         }
         .background(
             RoundedRectangle(cornerRadius: 8, style: .continuous)
