@@ -26,6 +26,7 @@ final class FloatingPanel: NSPanel {
         )
 
         self.title = "Clipiary"
+        isRestorable = false
         isFloatingPanel = true
         level = .floating
         collectionBehavior = [.auxiliary, .stationary, .moveToActiveSpace, .fullScreenAuxiliary]

@@ -20,9 +20,6 @@ struct PanelRootView: View {
         .padding(12)
         .frame(minWidth: 300, maxWidth: .infinity, minHeight: 400, maxHeight: .infinity)
         .background(panelBackground)
-        .task {
-            appState.requestSearchFocus()
-        }
         .onChange(of: appState.searchFocusRequestID) {
             searchFocused = true
         }
