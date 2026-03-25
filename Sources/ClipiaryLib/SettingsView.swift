@@ -42,6 +42,7 @@ struct SettingsView: View {
 
             settingsToggleRow(
                 title: "Move to top on paste",
+                help: "When you paste an item, move it to the top of your history so recent pastes are always first.",
                 isOn: Binding(
                     get: { appState.settings.moveToTopOnPaste },
                     set: { appState.settings.moveToTopOnPaste = $0 }
@@ -98,7 +99,7 @@ struct SettingsView: View {
                 )
             }
 
-            settingMetric(title: "Paste count bar") {
+            settingMetric(title: "Paste count bar", help: "A colored bar on each item showing how often you paste it. Helps you spot your most-used clips.") {
                 Picker("", selection: Binding(
                     get: { appState.settings.pasteCountBarScheme },
                     set: { appState.settings.pasteCountBarScheme = $0 }
@@ -117,6 +118,7 @@ struct SettingsView: View {
         settingsCard("Copy on Select") {
             settingsToggleRow(
                 title: "Enable globally (best effort)",
+                help: "Automatically capture text you select in any app, without pressing Cmd+C. Requires Accessibility access.",
                 isOn: Binding(
                     get: { appState.settings.isCopyOnSelectEnabled },
                     set: { appState.settings.isCopyOnSelectEnabled = $0 }
@@ -140,7 +142,7 @@ struct SettingsView: View {
                 .padding(.vertical, 4)
             }
 
-            settingMetric(title: "Minimum selection length") {
+            settingMetric(title: "Minimum selection length", help: "Ignore selections shorter than this many characters to avoid capturing accidental clicks.") {
                 Stepper(
                     "\(appState.settings.minimumSelectionLength)",
                     value: Binding(
@@ -152,7 +154,7 @@ struct SettingsView: View {
                 .font(.system(size: 11, weight: .medium))
             }
 
-            settingMetric(title: "Cooldown") {
+            settingMetric(title: "Cooldown", help: "Wait this long after a selection changes before capturing it. Prevents flooding your history while you drag to select text.") {
                 optionPicker(
                     selection: Binding(
                         get: { appState.settings.copyOnSelectCooldownMilliseconds },
@@ -163,7 +165,7 @@ struct SettingsView: View {
                 )
             }
 
-            settingMetric(title: "Keep unused items") {
+            settingMetric(title: "Keep unused items", help: "How many copy-on-select items to keep if you never paste them. They are automatically removed once this limit is exceeded.") {
                 optionPicker(
                     selection: Binding(
                         get: { appState.settings.copyOnSelectBufferLimit },
@@ -188,6 +190,7 @@ struct SettingsView: View {
 
             shortcutRow(
                 title: "Quick paste previous",
+                help: "Instantly paste the second-most-recent item in your history without opening Clipiary.",
                 value: appState.isRecordingQuickPasteShortcut ? "Press keys..." : appState.settings.quickPasteShortcut.displayString,
                 isRecording: appState.isRecordingQuickPasteShortcut
             ) {
@@ -223,12 +226,15 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
     }
 
-    private func settingMetric<Control: View>(title: String, @ViewBuilder control: () -> Control) -> some View {
+    private func settingMetric<Control: View>(title: String, help: String? = nil, @ViewBuilder control: () -> Control) -> some View {
         HStack(spacing: 8) {
             Text(title)
                 .font(.system(size: 12))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
+            if let help {
+                helpIcon(help)
+            }
             Spacer()
             control()
         }
@@ -236,20 +242,31 @@ struct SettingsView: View {
         .padding(.vertical, 5)
     }
 
-    private func settingsToggleRow(title: String, isOn: Binding<Bool>) -> some View {
-        Toggle(isOn: isOn) {
-            Text(title)
-                .font(.system(size: 12))
+    private func settingsToggleRow(title: String, help: String? = nil, isOn: Binding<Bool>) -> some View {
+        HStack(spacing: 0) {
+            Toggle(isOn: isOn) {
+                Text(title)
+                    .font(.system(size: 12))
+            }
+            .toggleStyle(.checkbox)
+            if let help {
+                helpIcon(help)
+                    .padding(.leading, 6)
+            }
         }
-        .toggleStyle(.checkbox)
         .padding(.horizontal, 8)
         .padding(.vertical, 5)
     }
 
-    private func shortcutRow(title: String, value: String, isRecording: Bool, onToggle: @escaping () -> Void) -> some View {
+    private func shortcutRow(title: String, help: String? = nil, value: String, isRecording: Bool, onToggle: @escaping () -> Void) -> some View {
         VStack(alignment: .leading, spacing: 4) {
-            Text(title)
-                .font(.system(size: 12))
+            HStack(spacing: 6) {
+                Text(title)
+                    .font(.system(size: 12))
+                if let help {
+                    helpIcon(help)
+                }
+            }
 
             HStack(spacing: 8) {
                 Text(value)
@@ -286,6 +303,33 @@ struct SettingsView: View {
         .labelsHidden()
         .pickerStyle(.menu)
     }
+
+    private func helpIcon(_ text: String) -> some View {
+        HelpIconView(text: text)
+    }
+}
+
+private struct HelpIconView: View {
+    let text: String
+    @State private var isShowingHelp = false
+
+    var body: some View {
+        Button {
+            isShowingHelp.toggle()
+        } label: {
+            Image(systemName: "questionmark.circle")
+                .font(.system(size: 11))
+                .foregroundStyle(.tertiary)
+        }
+        .buttonStyle(.plain)
+        .popover(isPresented: $isShowingHelp, arrowEdge: .trailing) {
+            Text(text)
+                .font(.system(size: 11))
+                .padding(10)
+                .frame(width: 200)
+                .fixedSize(horizontal: false, vertical: true)
+        }
+    }
 }
 
 @MainActor
@@ -308,10 +352,10 @@ final class SettingsWindowController {
             .environment(AppState.shared)
 
         let hostingView = NSHostingView(rootView: settingsView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 540, height: 420)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 540, height: 440)
 
         let window = NSPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 420),
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 440),
             styleMask: [.titled, .closable, .resizable],
             backing: .buffered,
             defer: false
