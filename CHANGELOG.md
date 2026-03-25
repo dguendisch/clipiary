@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Added
+- In-app updates via Sparkle framework
 - Help icons on non-obvious settings with popover descriptions
 - Auto-monospace: items copied from terminal emulators or IDEs (Terminal, iTerm2, Ghostty, VSCode, Goland) automatically use a console font, with configurable app list
 - Favorites descriptions: add an optional searchable description to favorite items via the favorites popup

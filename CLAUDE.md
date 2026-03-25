@@ -31,7 +31,7 @@ python3 tools/clipiary.py dev
 
 Package a release (creates zip, sha256, Homebrew cask):
 ```sh
-python3 tools/clipiary.py release --version <version> [--build-number <build-number>]
+python3 tools/clipiary.py release --version <version>
 ```
 
 Start the tag-driven release flow locally:
@@ -105,7 +105,7 @@ Tag-driven CI via `.github/workflows/release.yml`. Pushing a `v*` tag on `main` 
 Optional `.env` file (loaded automatically by the Python tooling):
 - `CLIPIARY_CODESIGN_IDENTITY` — code signing identity (Apple or self-signed)
 - `CLIPIARY_BUNDLE_ID` — bundle identifier override
-- `CLIPIARY_VERSION` / `CLIPIARY_BUILD_NUMBER` — version overrides
+- `CLIPIARY_VERSION` — version override
 
 ## Testing
 

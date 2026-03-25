@@ -225,6 +225,48 @@ def publish_release(root: Path, env: dict[str, str], runner: Runner, metadata: R
         runner.run(["git", "commit", "-m", f"clipiary {metadata.version}"], cwd=tap_dir, env=git_env)
         runner.run(["git", "push", "origin", "HEAD"], cwd=tap_dir, env=git_env)
 
+    _publish_appcast(root, env, runner, metadata)
+
+
+def _publish_appcast(
+    root: Path, env: dict[str, str], runner: Runner, metadata: ReleaseMetadata
+) -> None:
+    """Commit appcast.xml to the repo root on the main branch."""
+    if metadata.appcast_path is None or (not runner.dry_run and not metadata.appcast_path.exists()):
+        return
+
+    import shutil
+
+    target = root / "appcast.xml"
+    print(f"copy {metadata.appcast_path} -> {target}")
+    if not runner.dry_run:
+        shutil.copy2(metadata.appcast_path, target)
+
+    runner.run(["git", "add", "appcast.xml"], cwd=root)
+    diff = runner.run(
+        ["git", "diff", "--cached", "--quiet", "--", "appcast.xml"],
+        cwd=root,
+        read_only=True,
+        capture_output=True,
+        check=False,
+    )
+    if diff.returncode == 0:
+        print("Appcast already up to date.")
+        return
+    runner.run(
+        ["git", "config", "user.name", "github-actions[bot]"],
+        cwd=root,
+    )
+    runner.run(
+        ["git", "config", "user.email", "41898282+github-actions[bot]@users.noreply.github.com"],
+        cwd=root,
+    )
+    runner.run(
+        ["git", "commit", "-m", f"update appcast for {metadata.version}"],
+        cwd=root,
+    )
+    runner.run(["git", "push", "origin", "HEAD:main"], cwd=root)
+
 
 def latest_release_tag(root: Path, runner: Runner) -> str:
     tags = runner.read(["git", "tag", "--list", "v*", "--sort=version:refname"], cwd=root)

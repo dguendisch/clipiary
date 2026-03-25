@@ -24,6 +24,7 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
     }()
 
     private let appState = AppState.shared
+    private let updaterManager = UpdaterManager.shared
 
     override public init() {
         super.init()

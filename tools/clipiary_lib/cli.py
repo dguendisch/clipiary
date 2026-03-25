@@ -33,7 +33,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     release_parser = subparsers.add_parser("release")
     release_parser.add_argument("--version", required=True)
-    release_parser.add_argument("--build-number", default=None)
     release_parser.add_argument("--metadata-out", default=None)
     release_parser.add_argument("--json", action="store_true")
     release_parser.add_argument("--dry-run", action="store_true")
@@ -44,7 +43,6 @@ def build_parser() -> argparse.ArgumentParser:
 
     ci_release_parser = subparsers.add_parser("ci-release")
     ci_release_parser.add_argument("--version", required=True)
-    ci_release_parser.add_argument("--build-number", default=os.environ.get("GITHUB_RUN_NUMBER", "1"))
     ci_release_parser.add_argument("--metadata-out", default="dist/release.json")
     ci_release_parser.add_argument("--json", action="store_true")
     ci_release_parser.add_argument("--dry-run", action="store_true")
@@ -98,14 +96,12 @@ def main(argv: list[str] | None = None) -> int:
             return 0
 
         if args.command == "release":
-            build_number = args.build_number or env.get("CLIPIARY_BUILD_NUMBER", "1")
             metadata_out = resolve_path(root, args.metadata_out)
             metadata = build_release(
                 root,
                 env,
                 runner,
                 version=args.version,
-                build_number=build_number,
                 metadata_out=metadata_out,
             )
             if args.json:
@@ -120,7 +116,6 @@ def main(argv: list[str] | None = None) -> int:
 
             metadata = ReleaseMetadata(
                 version=payload["version"],
-                build_number=payload["build_number"],
                 app_bundle=Path(payload["app_bundle"]),
                 archive_path=Path(payload["archive_path"]),
                 sha256=payload["sha256"],
@@ -129,6 +124,7 @@ def main(argv: list[str] | None = None) -> int:
                 release_notes_path=Path(payload["release_notes_path"]),
                 release_repo=payload["release_repo"],
                 cask_token=payload["cask_token"],
+                appcast_path=Path(payload["appcast_path"]) if payload.get("appcast_path") else None,
             )
             publish_release(root, env, runner, metadata)
             return 0
@@ -141,7 +137,6 @@ def main(argv: list[str] | None = None) -> int:
                 env,
                 runner,
                 version=args.version,
-                build_number=args.build_number,
                 metadata_out=resolve_path(root, args.metadata_out),
             )
             publish_release(root, env, runner, metadata)

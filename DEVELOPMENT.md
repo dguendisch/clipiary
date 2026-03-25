@@ -104,7 +104,7 @@ If a tag points to a commit that is not contained in `main`, the workflow exits 
 The workflow keeps release logic in the repo by delegating to:
 
 ```sh
-python3 tools/clipiary.py ci-release --version <version> --build-number <run-number>
+python3 tools/clipiary.py ci-release --version <version>
 ```
 
 Minimum GitHub Actions secret for private tap releases:

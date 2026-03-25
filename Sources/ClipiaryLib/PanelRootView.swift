@@ -111,6 +111,16 @@ struct PanelRootView: View {
             accessibilityStatus
             Spacer()
             Button {
+                UpdaterManager.shared.checkForUpdates()
+            } label: {
+                HStack(spacing: 3) {
+                    Image(systemName: "arrow.triangle.2.circlepath")
+                    Text("Updates")
+                }
+            }
+            .help("Check for Updates (v\(Bundle.main.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "?"))" + (UpdaterManager.shared.isConfigured ? "" : " — updates not available in this build"))
+            .disabled(!UpdaterManager.shared.isConfigured)
+            Button {
                 SettingsWindowController.shared.open()
             } label: {
                 HStack(spacing: 3) {

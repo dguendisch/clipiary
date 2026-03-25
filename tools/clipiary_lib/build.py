@@ -3,6 +3,7 @@ from __future__ import annotations
 import plistlib
 import shlex
 import shutil
+import subprocess
 from dataclasses import dataclass
 from pathlib import Path
 
@@ -16,7 +17,6 @@ class BuildResult:
     executable_path: Path
     configuration: str
     version: str
-    build_number: str
     signing_identity: str
 
 
@@ -50,11 +50,9 @@ def build_app(
     *,
     configuration: str,
     version_override: str | None = None,
-    build_number_override: str | None = None,
 ) -> BuildResult:
     app_name = get_env(env, "CLIPIARY_APP_NAME", "Clipiary")
     bundle_id = get_env(env, "CLIPIARY_BUNDLE_ID", "dev.liamhess.clipiary")
-    build_number = build_number_override or get_env(env, "CLIPIARY_BUILD_NUMBER", "1")
     version = version_override or env.get("CLIPIARY_VERSION") or resolve_default_version(root, runner)
     signing_identity = env.get("CLIPIARY_CODESIGN_IDENTITY", "")
     codesign_flags = shlex.split(env.get("CLIPIARY_CODESIGN_FLAGS", ""))
@@ -89,6 +87,11 @@ def build_app(
         shutil.copy2(executable_path, bundle_executable)
         bundle_executable.chmod(0o755)
 
+    # Add rpath so the executable can find frameworks in Contents/Frameworks/
+    runner.run([
+        "install_name_tool", "-add_rpath", "@executable_path/../Frameworks", str(bundle_executable)
+    ])
+
     info_plist = {
         "CFBundleDevelopmentRegion": "en",
         "CFBundleDisplayName": app_name,
@@ -98,13 +101,20 @@ def build_app(
         "CFBundleName": app_name,
         "CFBundlePackageType": "APPL",
         "CFBundleShortVersionString": version,
-        "CFBundleVersion": build_number,
+        "CFBundleVersion": version,
         "LSMinimumSystemVersion": "14.0",
         "LSUIElement": True,
         "NSPrincipalClass": "NSApplication",
     }
     if icon_source.exists():
         info_plist["CFBundleIconFile"] = "AppIcon"
+
+    sparkle_feed_url = env.get("CLIPIARY_APPCAST_URL", "")
+    sparkle_public_key = env.get("CLIPIARY_SPARKLE_PUBLIC_KEY", "")
+    if sparkle_feed_url:
+        info_plist["SUFeedURL"] = sparkle_feed_url
+    if sparkle_public_key:
+        info_plist["SUPublicEDKey"] = sparkle_public_key
 
     info_plist_path = contents_dir / "Info.plist"
     print(f"write {info_plist_path}")
@@ -118,6 +128,8 @@ def build_app(
         if not runner.dry_run:
             shutil.copy2(icon_source, target_icon)
 
+    _embed_sparkle_framework(root, contents_dir, configuration, swift_env, runner)
+
     if signing_identity:
         runner.run(
             ["codesign", "--force", "--deep", "--sign", signing_identity, *codesign_flags, str(app_bundle)]
@@ -130,6 +142,51 @@ def build_app(
         executable_path=bundle_executable,
         configuration=configuration,
         version=version,
-        build_number=build_number,
         signing_identity=signing_identity or "-",
     )
+
+
+def _find_sparkle_framework(root: Path, configuration: str, swift_env: dict[str, str]) -> Path | None:
+    """Locate Sparkle.framework from SPM artifacts."""
+    # Check the build products directory (placed there by SPM during linking)
+    try:
+        bin_dir = subprocess.check_output(
+            ["/usr/bin/swift", "build", "--configuration", configuration, "--show-bin-path"],
+            cwd=root,
+            env=swift_env,
+            text=True,
+        ).strip()
+        build_fw = Path(bin_dir) / "Sparkle.framework"
+        if build_fw.exists():
+            return build_fw
+    except subprocess.CalledProcessError:
+        pass
+    # Fallback: xcframework extracted by SPM
+    xcfw = root / ".build" / "artifacts" / "sparkle" / "Sparkle" / "Sparkle.xcframework" / "macos-arm64_x86_64" / "Sparkle.framework"
+    if xcfw.exists():
+        return xcfw
+    return None
+
+
+def _embed_sparkle_framework(
+    root: Path,
+    contents_dir: Path,
+    configuration: str,
+    swift_env: dict[str, str],
+    runner: Runner,
+) -> None:
+    """Copy Sparkle.framework into Contents/Frameworks/, preserving symlinks."""
+    fw_source = _find_sparkle_framework(root, configuration, swift_env)
+    if fw_source is None:
+        print("warning: Sparkle.framework not found in build artifacts, skipping embed")
+        return
+
+    frameworks_dir = contents_dir / "Frameworks"
+    ensure_dir(frameworks_dir, dry_run=runner.dry_run)
+    target_fw = frameworks_dir / "Sparkle.framework"
+    print(f"copy {fw_source} -> {target_fw}")
+    if not runner.dry_run:
+        if target_fw.exists():
+            shutil.rmtree(target_fw)
+        # Use shutil.copytree with symlinks=True to preserve framework symlinks
+        shutil.copytree(fw_source, target_fw, symlinks=True)
