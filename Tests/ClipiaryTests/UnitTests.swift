@@ -201,6 +201,8 @@ func makeItem(
         #expect(settings.isTerminalApp(bundleID: "com.apple.Terminal") == true)
         #expect(settings.isTerminalApp(bundleID: "com.googlecode.iterm2") == true)
         #expect(settings.isTerminalApp(bundleID: "com.mitchellh.ghostty") == true)
+        #expect(settings.isTerminalApp(bundleID: "com.microsoft.VSCode") == true)
+        #expect(settings.isTerminalApp(bundleID: "com.jetbrains.goland") == true)
         #expect(settings.isTerminalApp(bundleID: "com.example.other") == false)
         #expect(settings.isTerminalApp(bundleID: nil) == false)
     }

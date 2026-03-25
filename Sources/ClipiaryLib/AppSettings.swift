@@ -29,7 +29,7 @@ final class AppSettings {
         static let terminalBundleIDs = "terminalBundleIDs"
     }
 
-    static let defaultTerminalBundleIDsString = "com.apple.Terminal, com.googlecode.iterm2, com.mitchellh.ghostty"
+    static let defaultTerminalBundleIDsString = "com.apple.Terminal, com.googlecode.iterm2, com.mitchellh.ghostty, com.microsoft.VSCode, com.jetbrains.goland"
 
     private let defaults: UserDefaults
 

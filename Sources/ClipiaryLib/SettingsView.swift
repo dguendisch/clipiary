@@ -113,8 +113,8 @@ struct SettingsView: View {
             }
 
             settingsToggleRow(
-                title: "Auto monospace from terminals",
-                help: "Automatically use a monospace font for items copied from terminal emulator apps.",
+                title: "Auto monospace from terminals/IDEs",
+                help: "Automatically use a monospace font for items copied from terminals and IDEs.",
                 isOn: Binding(
                     get: { appState.settings.autoMonospaceFromTerminals },
                     set: { appState.settings.autoMonospaceFromTerminals = $0 }
@@ -366,7 +366,7 @@ private struct TerminalBundleIDsConfigButton: View {
         .buttonStyle(.plain)
         .popover(isPresented: $isShowingConfig, arrowEdge: .trailing) {
             VStack(alignment: .leading, spacing: 6) {
-                Text("Terminal bundle IDs")
+                Text("Terminal/IDE bundle IDs")
                     .font(.system(size: 11, weight: .semibold))
                     .foregroundStyle(.secondary)
                 TextField("com.apple.Terminal, ...", text: $terminalBundleIDs)
