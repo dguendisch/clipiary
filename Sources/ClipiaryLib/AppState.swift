@@ -103,6 +103,7 @@ final class AppState {
     func start() {
         configManager.load()
         history.load()
+        restoreMissingTabs()
         seedConfigEntries()
         history.enforceLimit(settings.historyLimit)
         permissionManager.refreshTrust()
@@ -486,6 +487,19 @@ final class AppState {
             history.moveToTop(item)
         }
         quickPasteRequestID &+= 1
+    }
+
+    private func restoreMissingTabs() {
+        let knownTabs = Set(configManager.favoriteTabs.map(\.name))
+        var missingTabs: [String] = []
+        for item in history.items {
+            for tabName in item.favoriteTabs where !knownTabs.contains(tabName) && !missingTabs.contains(tabName) {
+                missingTabs.append(tabName)
+            }
+        }
+        for tabName in missingTabs {
+            configManager.addTab(name: tabName)
+        }
     }
 
     private func seedConfigEntries() {

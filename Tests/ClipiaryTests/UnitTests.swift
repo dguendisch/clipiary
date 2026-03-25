@@ -364,4 +364,18 @@ func makeItem(
         #expect(favorites.count == 1)
         #expect(favorites[0].text == "fav")
     }
+
+    @Test func startRestoresMissingTabsFromHistory() {
+        let appState = makeTestAppState()
+        // Pre-populate history with items assigned to custom tabs
+        appState.history.add(makeItem(text: "snippet", favoriteTabs: ["Snippets"]), limit: 100)
+        appState.history.add(makeItem(text: "cmd", favoriteTabs: ["Shell", "Snippets"]), limit: 100)
+
+        // start() loads config (no config.json → default "Favorites") then restores missing tabs
+        appState.start()
+
+        let tabNames = appState.allTabs.map(\.id)
+        #expect(tabNames.contains("fav:Snippets"))
+        #expect(tabNames.contains("fav:Shell"))
+    }
 }
