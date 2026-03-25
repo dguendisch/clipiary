@@ -37,7 +37,7 @@ def extract_version_notes(root: Path, version: str) -> str:
 
     notes = match.group(1).strip()
     if not notes:
-        raise ToolError(f"Changelog section for version {version} is empty")
+        return "Maintenance release.\n"
 
     return notes + "\n"
 
