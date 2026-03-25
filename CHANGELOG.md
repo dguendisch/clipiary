@@ -4,8 +4,8 @@
 
 ### Added
 - Help icons on non-obvious settings with popover descriptions
-- Auto-monospace: items copied from terminal emulators (Terminal, iTerm2, Ghostty) automatically use a console font, with configurable terminal app list
-- Favorites descriptions: add an optional short description to favorite items via the favorites popup (descriptions are included in search)
+- Auto-monospace: items copied from terminal emulators or IDEs (Terminal, iTerm2, Ghostty, VSCode, Goland) automatically use a console font, with configurable app list
+- Favorites descriptions: add an optional searchable description to favorite items via the favorites popup
 
 ### Fixed
 - Restore favorite tabs from history when config.json is missing or reset
