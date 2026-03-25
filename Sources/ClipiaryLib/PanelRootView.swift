@@ -9,6 +9,8 @@ struct PanelRootView: View {
     @State private var dropTargetIndex: Int?
     @State private var shortcutsHelpPresented = false
     @State private var selectedRowRect: CGRect = .zero
+    @State private var snippetDescriptionText: String = ""
+    @FocusState private var isDescriptionFieldFocused: Bool
 
     var body: some View {
         VStack(spacing: 12) {
@@ -521,6 +523,37 @@ struct PanelRootView: View {
                 .padding(.vertical, 2)
 
             HStack(spacing: 6) {
+                TextField("Description (optional)", text: $snippetDescriptionText)
+                    .font(.system(size: 11))
+                    .textFieldStyle(.roundedBorder)
+                    .focused($isDescriptionFieldFocused)
+                    .onChange(of: snippetDescriptionText) { _, newValue in
+                        appState.setSnippetDescription(newValue)
+                    }
+                    .onChange(of: isDescriptionFieldFocused) { _, focused in
+                        appState.isEditingSnippetDescription = focused
+                    }
+                    .onSubmit {
+                        isDescriptionFieldFocused = false
+                    }
+                if !isDescriptionFieldFocused {
+                    Text("D")
+                        .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                        .padding(.horizontal, 5)
+                        .padding(.vertical, 2)
+                        .background(
+                            RoundedRectangle(cornerRadius: 3, style: .continuous)
+                                .fill(Color.secondary.opacity(0.12))
+                        )
+                }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+
+            Divider()
+                .padding(.vertical, 2)
+
+            HStack(spacing: 6) {
                 Image(systemName: appState.selectedItem?.isMonospace == true ? "checkmark.square" : "square")
                     .font(.system(size: 11))
                 Text("Console font")
@@ -633,6 +666,17 @@ struct PanelRootView: View {
             RoundedRectangle(cornerRadius: 10, style: .continuous)
                 .stroke(Color.primary.opacity(0.15), lineWidth: 1)
         )
+        .onAppear {
+            snippetDescriptionText = appState.selectedItem?.snippetDescription ?? ""
+        }
+        .onChange(of: appState.isEditingSnippetDescription) { _, editing in
+            isDescriptionFieldFocused = editing
+        }
+        .onChange(of: appState.showingFavoriteTabPicker) { _, showing in
+            if !showing {
+                isDescriptionFieldFocused = false
+            }
+        }
     }
 
     private func shortcutRow(_ title: String, _ shortcut: String) -> some View {

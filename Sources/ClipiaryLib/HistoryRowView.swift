@@ -134,6 +134,14 @@ struct HistoryRowView: View {
                 }
             }
 
+            if let description = item.snippetDescription, !description.isEmpty {
+                Text(description)
+                    .font(.system(size: 11))
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .padding(.leading, 22)
+            }
+
             if showItemDetails {
                 HStack(spacing: 6) {
                     Text(item.appName)

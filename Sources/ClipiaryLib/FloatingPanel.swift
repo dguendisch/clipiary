@@ -117,7 +117,7 @@ final class FloatingPanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, appState.showingFavoriteTabPicker, !appState.isRecordingItemShortcut {
+        if event.type == .keyDown, appState.showingFavoriteTabPicker, !appState.isRecordingItemShortcut, !appState.isEditingSnippetDescription {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if modifiers.isDisjoint(with: [.command, .option, .control]) {
                 switch event.keyCode {
@@ -131,6 +131,8 @@ final class FloatingPanel: NSPanel {
                     appState.togglePickerMonospace()
                 case 1: // S
                     appState.startRecordingItemShortcut()
+                case 2: // D
+                    appState.isEditingSnippetDescription = true
                 case 51: // Delete/Backspace
                     appState.removeItemShortcut()
                 case 53: // Escape
@@ -165,7 +167,9 @@ final class FloatingPanel: NSPanel {
         if appState.showingFavoriteTabPicker {
             appState.showingFavoriteTabPicker = false
             appState.isRecordingItemShortcut = false
+            appState.isEditingSnippetDescription = false
             appState.itemShortcutError = nil
+            appState.requestSearchFocus()
             return
         }
         SettingsWindowController.shared.close()

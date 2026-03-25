@@ -49,6 +49,7 @@ final class AppState {
     var showingFavoriteTabPicker = false
     var favoriteTabPickerIndex = 0
     var isRecordingItemShortcut = false
+    var isEditingSnippetDescription = false
     var itemShortcutError: String?
     private(set) var itemShortcutsChangedID = 0
     private(set) var searchFocusRequestID = 0
@@ -203,7 +204,8 @@ final class AppState {
             terms.allSatisfy { term in
                 item.text.localizedCaseInsensitiveContains(term) ||
                 item.appName.localizedCaseInsensitiveContains(term) ||
-                (item.bundleID?.localizedCaseInsensitiveContains(term) ?? false)
+                (item.bundleID?.localizedCaseInsensitiveContains(term) ?? false) ||
+                (item.snippetDescription?.localizedCaseInsensitiveContains(term) ?? false)
             }
         }
     }
@@ -339,6 +341,11 @@ final class AppState {
     func togglePickerMonospace() {
         guard let item = selectedItem else { return }
         history.toggleMonospace(item)
+    }
+
+    func setSnippetDescription(_ description: String?) {
+        guard let item = selectedItem else { return }
+        history.setSnippetDescription(description, for: item)
     }
 
     func startRecordingItemShortcut() {

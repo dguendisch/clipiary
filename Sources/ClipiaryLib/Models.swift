@@ -23,6 +23,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
     var shortcutKeyCode: Int?
     var shortcutModifiers: Int?
     var sortIndex: Double?
+    var snippetDescription: String?
 
     init(
         id: UUID = UUID(),
@@ -39,7 +40,8 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         pasteCount: Int = 0,
         shortcutKeyCode: Int? = nil,
         shortcutModifiers: Int? = nil,
-        sortIndex: Double? = nil
+        sortIndex: Double? = nil,
+        snippetDescription: String? = nil
     ) {
         self.id = id
         self.text = text
@@ -56,6 +58,7 @@ struct HistoryItem: Identifiable, Hashable, Sendable {
         self.shortcutKeyCode = shortcutKeyCode
         self.shortcutModifiers = shortcutModifiers
         self.sortIndex = sortIndex
+        self.snippetDescription = snippetDescription
     }
 
     var isImage: Bool {
@@ -89,6 +92,7 @@ extension HistoryItem: Codable {
         case pasteCount
         case shortcutKeyCode, shortcutModifiers
         case sortIndex
+        case snippetDescription
     }
 
     init(from decoder: Decoder) throws {
@@ -107,6 +111,7 @@ extension HistoryItem: Codable {
         shortcutKeyCode = try container.decodeIfPresent(Int.self, forKey: .shortcutKeyCode)
         shortcutModifiers = try container.decodeIfPresent(Int.self, forKey: .shortcutModifiers)
         sortIndex = try container.decodeIfPresent(Double.self, forKey: .sortIndex)
+        snippetDescription = try container.decodeIfPresent(String.self, forKey: .snippetDescription)
 
         if let tabs = try? container.decode(Set<String>.self, forKey: .favoriteTabs) {
             favoriteTabs = tabs
@@ -134,6 +139,7 @@ extension HistoryItem: Codable {
         try container.encodeIfPresent(shortcutKeyCode, forKey: .shortcutKeyCode)
         try container.encodeIfPresent(shortcutModifiers, forKey: .shortcutModifiers)
         try container.encodeIfPresent(sortIndex, forKey: .sortIndex)
+        try container.encodeIfPresent(snippetDescription, forKey: .snippetDescription)
     }
 }
 

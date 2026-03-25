@@ -30,7 +30,8 @@ func makeItem(
     favoriteTabs: Set<String> = [],
     isMonospace: Bool = false,
     imageFileName: String? = nil,
-    pasteCount: Int = 0
+    pasteCount: Int = 0,
+    snippetDescription: String? = nil
 ) -> HistoryItem {
     HistoryItem(
         text: text,
@@ -41,7 +42,8 @@ func makeItem(
         favoriteTabs: favoriteTabs,
         isMonospace: isMonospace,
         imageFileName: imageFileName,
-        pasteCount: pasteCount
+        pasteCount: pasteCount,
+        snippetDescription: snippetDescription
     )
 }
 
@@ -86,7 +88,8 @@ func makeItem(
             bundleID: "com.apple.Terminal",
             favoriteTabs: ["Tab1", "Tab2"],
             isMonospace: true,
-            pasteCount: 5
+            pasteCount: 5,
+            snippetDescription: "my snippet"
         )
         let encoder = JSONEncoder()
         encoder.dateEncodingStrategy = .iso8601
@@ -100,6 +103,7 @@ func makeItem(
         #expect(decoded.isMonospace == original.isMonospace)
         #expect(decoded.pasteCount == original.pasteCount)
         #expect(decoded.bundleID == original.bundleID)
+        #expect(decoded.snippetDescription == "my snippet")
     }
 
     @Test func legacyIsFavoriteDecoding() throws {
@@ -273,6 +277,21 @@ func makeItem(
         #expect(store2.items.count == 1)
         #expect(store2.items[0].text == "persisted")
     }
+
+    @Test func setAndClearSnippetDescription() {
+        let store = makeTempStore()
+        let item = makeItem(text: "snippet")
+        store.add(item, limit: 100)
+
+        store.setSnippetDescription("my description", for: store.items[0])
+        #expect(store.items[0].snippetDescription == "my description")
+
+        store.setSnippetDescription("  ", for: store.items[0])
+        #expect(store.items[0].snippetDescription == nil)
+
+        store.setSnippetDescription("trimmed  ", for: store.items[0])
+        #expect(store.items[0].snippetDescription == "trimmed")
+    }
 }
 
 // MARK: - AppState Filtering Tests
@@ -310,6 +329,17 @@ func makeItem(
         let results = appState.filteredItems()
         #expect(results.count == 1)
         #expect(results[0].appName == "Safari")
+    }
+
+    @Test func filteredItemsMatchesSnippetDescription() {
+        let appState = makeTestAppState()
+        let item = makeItem(text: "some text", snippetDescription: "my API key")
+        appState.history.add(item, limit: 100)
+        appState.history.add(makeItem(text: "other text"), limit: 100)
+        appState.searchQuery = "API"
+        let results = appState.filteredItems()
+        #expect(results.count == 1)
+        #expect(results[0].snippetDescription == "my API key")
     }
 
     @Test func historyItemsSortedByRecency() {

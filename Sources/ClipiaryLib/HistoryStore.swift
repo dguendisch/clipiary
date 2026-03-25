@@ -145,6 +145,13 @@ final class HistoryStore {
         persist()
     }
 
+    func setSnippetDescription(_ description: String?, for item: HistoryItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let trimmed = description?.trimmingCharacters(in: .whitespacesAndNewlines)
+        items[index].snippetDescription = (trimmed?.isEmpty ?? true) ? nil : trimmed
+        persist()
+    }
+
     func seedEntries(for tabConfig: FavoritesTabConfig) {
         guard let entries = tabConfig.entries else { return }
         for entry in entries {
