@@ -142,7 +142,9 @@ struct PanelRootView: View {
                 shortcutsHelpPopover
             }
             Button {
-                appState.history.clearNonFavorites()
+                if Self.showClearHistoryConfirmAlert() {
+                    appState.history.clearNonFavorites()
+                }
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "trash")
@@ -731,6 +733,16 @@ struct PanelRootView: View {
         guard response == .alertFirstButtonReturn else { return nil }
         let result = textField.stringValue.trimmingCharacters(in: .whitespacesAndNewlines)
         return result.isEmpty ? nil : result
+    }
+
+    private static func showClearHistoryConfirmAlert() -> Bool {
+        let alert = NSAlert()
+        alert.messageText = "Clear History?"
+        alert.informativeText = "This will remove all history items except favorites. This action cannot be undone."
+        alert.alertStyle = .warning
+        alert.addButton(withTitle: "Clear")
+        alert.addButton(withTitle: "Cancel")
+        return alert.runModal() == .alertFirstButtonReturn
     }
 
     private static func showDeleteConfirmAlert(tabName: String) -> Bool {
