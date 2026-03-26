@@ -124,7 +124,7 @@ struct PanelRootView: View {
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "questionmark.circle")
-                    Text("Keyboard Shortcuts")
+                    Text("Keyboard")
                 }
             }
             .help("Keyboard shortcuts")
@@ -136,9 +136,10 @@ struct PanelRootView: View {
             } label: {
                 HStack(spacing: 3) {
                     Image(systemName: "trash")
-                    Text("Clear History")
+                    Text("Clear")
                 }
             }
+            .help("Clear all History items (except favorites)")
             Button {
                 NSApplication.shared.terminate(nil)
             } label: {
