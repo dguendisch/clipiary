@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import plistlib
 import shlex
 import shutil
@@ -194,10 +195,43 @@ def _codesign_bundle(
     flags: list[str],
     runner: Runner,
 ) -> None:
-    """Sign embedded frameworks individually, then sign the app bundle."""
+    """Sign embedded frameworks inside-out, then sign the app bundle."""
     frameworks_dir = app_bundle / "Contents" / "Frameworks"
     if frameworks_dir.is_dir():
         for fw in sorted(frameworks_dir.iterdir()):
-            if fw.suffix == ".framework" or fw.suffix == ".dylib":
+            if fw.suffix == ".framework":
+                _codesign_framework(fw, identity, flags, runner)
+            elif fw.suffix == ".dylib":
                 runner.run(["codesign", "--force", "--sign", identity, *flags, str(fw)])
     runner.run(["codesign", "--force", "--sign", identity, *flags, str(app_bundle)])
+
+
+def _codesign_framework(
+    fw: Path,
+    identity: str,
+    flags: list[str],
+    runner: Runner,
+) -> None:
+    """Sign a framework bundle inside-out: XPC services, helpers, then the framework itself."""
+    # Resolve the versioned content directory (e.g. Versions/B/)
+    versions_dir = fw / "Versions"
+    if versions_dir.is_dir():
+        for ver in sorted(versions_dir.iterdir()):
+            if ver.is_symlink() or not ver.is_dir():
+                continue
+            # Sign XPC services
+            xpc_dir = ver / "XPCServices"
+            if xpc_dir.is_dir():
+                for xpc in sorted(xpc_dir.iterdir()):
+                    if xpc.suffix == ".xpc":
+                        runner.run(["codesign", "--force", "--sign", identity, *flags, str(xpc)])
+            # Sign helper apps
+            for item in sorted(ver.iterdir()):
+                if item.suffix == ".app":
+                    runner.run(["codesign", "--force", "--sign", identity, *flags, str(item)])
+            # Sign standalone executables (e.g. Autoupdate)
+            for item in sorted(ver.iterdir()):
+                if item.is_file() and not item.is_symlink() and os.access(item, os.X_OK) and item.suffix == "":
+                    runner.run(["codesign", "--force", "--sign", identity, *flags, str(item)])
+    # Sign the framework itself
+    runner.run(["codesign", "--force", "--sign", identity, *flags, str(fw)])
