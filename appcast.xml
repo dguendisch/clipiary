@@ -1,10 +1,3 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss xmlns:ns0="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Clipiary</title><item><title>Version 0.7.0</title><ns0:version>0.7.0</ns0:version><ns0:shortVersionString>0.7.0</ns0:shortVersionString><description>### Added
-- In-app updates via Sparkle framework
-- Help icons on non-obvious settings with popover descriptions
-- Auto-monospace: items copied from terminal emulators or IDEs (Terminal, iTerm2, Ghostty, VSCode, Goland) automatically use a console font, with configurable app list
-- Favorites descriptions: add an optional searchable description to favorite items via the favorites popup
-
-### Fixed
-- Restore favorite tabs from history when config.json is missing or reset
-</description><pubDate>Thu, 26 Mar 2026 15:27:44 +0000</pubDate><enclosure url="https://github.com/liamhess/clipiary/releases/download/v0.7.0/Clipiary-0.7.0.zip" ns0:edSignature="dsSQCygCvH9ctbhX+rF+4xb92GXiCWz5/h1cwO3Q5jfr2rIYlwdFezIVZ6EAjJ7HmJBBTHsrYGl7KPKJH2nUBg==" length="1812222" type="application/octet-stream" /></item></channel></rss>
+<rss xmlns:ns0="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Clipiary</title><item><title>Version 0.7.1</title><ns0:version>0.7.1</ns0:version><ns0:shortVersionString>0.7.1</ns0:shortVersionString><description>Maintenance release.
+</description><pubDate>Thu, 26 Mar 2026 15:36:38 +0000</pubDate><enclosure url="https://github.com/liamhess/clipiary/releases/download/v0.7.1/Clipiary-0.7.1.zip" ns0:edSignature="0ey8EU4De6b8t2N+hGWqwuVRr92+q/GpjQlocKGwf07RcS+W5PLHA0zv/KFFvn1DGdAw8NOeC6l0IVsE+S9bAQ==" length="1780264" type="application/octet-stream" /></item></channel></rss>
