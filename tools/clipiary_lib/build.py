@@ -130,12 +130,8 @@ def build_app(
 
     _embed_sparkle_framework(root, contents_dir, configuration, swift_env, runner)
 
-    if signing_identity:
-        runner.run(
-            ["codesign", "--force", "--deep", "--sign", signing_identity, *codesign_flags, str(app_bundle)]
-        )
-    else:
-        runner.run(["codesign", "--force", "--deep", "--sign", "-", str(app_bundle)])
+    sign_identity = signing_identity or "-"
+    _codesign_bundle(app_bundle, sign_identity, codesign_flags, runner)
 
     return BuildResult(
         app_bundle=app_bundle,
@@ -190,3 +186,18 @@ def _embed_sparkle_framework(
             shutil.rmtree(target_fw)
         # Use shutil.copytree with symlinks=True to preserve framework symlinks
         shutil.copytree(fw_source, target_fw, symlinks=True)
+
+
+def _codesign_bundle(
+    app_bundle: Path,
+    identity: str,
+    flags: list[str],
+    runner: Runner,
+) -> None:
+    """Sign embedded frameworks individually, then sign the app bundle."""
+    frameworks_dir = app_bundle / "Contents" / "Frameworks"
+    if frameworks_dir.is_dir():
+        for fw in sorted(frameworks_dir.iterdir()):
+            if fw.suffix == ".framework" or fw.suffix == ".dylib":
+                runner.run(["codesign", "--force", "--sign", identity, *flags, str(fw)])
+    runner.run(["codesign", "--force", "--sign", identity, *flags, str(app_bundle)])
