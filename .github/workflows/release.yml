@@ -32,7 +32,7 @@ jobs:
       CLIPIARY_APPCAST_URL: https://raw.githubusercontent.com/liamhess/clipiary/main/appcast.xml
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           fetch-depth: 0
 
