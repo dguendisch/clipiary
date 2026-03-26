@@ -132,7 +132,8 @@ def build_app(
     _embed_sparkle_framework(root, contents_dir, configuration, swift_env, runner)
 
     sign_identity = signing_identity or "-"
-    _codesign_bundle(app_bundle, sign_identity, codesign_flags, runner)
+    entitlements = root / "Resources" / "Clipiary.entitlements"
+    _codesign_bundle(app_bundle, sign_identity, codesign_flags, runner, entitlements=entitlements)
 
     return BuildResult(
         app_bundle=app_bundle,
@@ -194,6 +195,8 @@ def _codesign_bundle(
     identity: str,
     flags: list[str],
     runner: Runner,
+    *,
+    entitlements: Path | None = None,
 ) -> None:
     """Sign embedded frameworks inside-out, then sign the app bundle."""
     frameworks_dir = app_bundle / "Contents" / "Frameworks"
@@ -203,7 +206,10 @@ def _codesign_bundle(
                 _codesign_framework(fw, identity, flags, runner)
             elif fw.suffix == ".dylib":
                 runner.run(["codesign", "--force", "--sign", identity, *flags, str(fw)])
-    runner.run(["codesign", "--force", "--sign", identity, *flags, str(app_bundle)])
+    app_flags = list(flags)
+    if entitlements is not None and entitlements.exists():
+        app_flags += ["--entitlements", str(entitlements)]
+    runner.run(["codesign", "--force", "--sign", identity, *app_flags, str(app_bundle)])
 
 
 def _codesign_framework(
