@@ -351,7 +351,7 @@ struct PanelRootView: View {
                 shortcutRow("Switch tabs", "Left / Right")
                 shortcutRow("Restore selected item", "Return")
                 shortcutRow("Preview selected item", "Space")
-                shortcutRow("Delete selected item", "Delete")
+                shortcutRow("Delete selected item", "Delete / ⌫")
                 shortcutRow("Close popover", "Esc")
             }
         }

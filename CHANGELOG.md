@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- BACKSPACE can now be used as well to delete history entries
 
 ## [0.7.6] - 2026-03-26
 ### Fixed

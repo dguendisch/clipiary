@@ -288,7 +288,8 @@ public final class AppDelegate: NSObject, NSApplicationDelegate {
         case 36:
             appState.requestPasteSelected()
             return suppressKeyUp(for: event)
-        case 117:
+        case 51, 117: // Backspace, Forward Delete
+            guard appState.searchQuery.isEmpty else { return event }
             appState.deleteSelectedItem()
             return suppressKeyUp(for: event)
         case 116: // Page Up

@@ -1,3 +1,2 @@
-- add BACKSPACE to delete entries
 - add password manager concealing
 - think about rich-text handling
