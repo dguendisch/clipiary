@@ -2,6 +2,8 @@
 
 ## [Unreleased]
 
+## [0.7.0] - 2026-03-26
+
 ### Added
 - In-app updates via Sparkle framework
 - Help icons on non-obvious settings with popover descriptions
