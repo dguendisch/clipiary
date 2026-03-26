@@ -1,6 +1,7 @@
 # Changelog
 
 ## [Unreleased]
+- use Sparkle release notes in markdown
 
 ## [0.7.3] - 2026-03-26
 

@@ -21,7 +21,9 @@ def generate_appcast_entry(
     SubElement(item, "title").text = f"Version {version}"
     SubElement(item, f"{{{SPARKLE_NS}}}version").text = version
     SubElement(item, f"{{{SPARKLE_NS}}}shortVersionString").text = version
-    SubElement(item, "description").text = release_notes
+    desc = SubElement(item, "description")
+    desc.set(f"{{{SPARKLE_NS}}}format", "markdown")
+    desc.text = release_notes
     SubElement(item, "pubDate").text = datetime.now(timezone.utc).strftime(
         "%a, %d %b %Y %H:%M:%S %z"
     )
