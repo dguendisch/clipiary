@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.8.1] - 2026-03-27
 ### Added
 - Update button now shows when an update is available
 - Text settings now contain a preview of the configured text
