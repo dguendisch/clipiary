@@ -1,1 +1,3 @@
 - think about rich-text handling (currently only plain text and images are supported, no rich text)
+- themes? (at least dark/light config)
+- update icon to reflect when a new update is available
