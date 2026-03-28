@@ -1,6 +1,16 @@
 import AppKit
 import SwiftUI
 
+private struct ThemedRootView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        PanelRootView()
+            .environment(\.theme, appState.themeManager.activeTheme)
+            .preferredColorScheme(appState.themeManager.activeTheme.colorScheme)
+    }
+}
+
 @MainActor
 final class FloatingPanel: NSPanel {
     private let statusBarButton: NSStatusBarButton?
@@ -37,7 +47,7 @@ final class FloatingPanel: NSPanel {
         maxSize = NSSize(width: 800, height: CGFloat.greatestFiniteMagnitude)
 
         let hostingView = PanelHostingView(
-            rootView: AnyView(PanelRootView().environment(appState)),
+            rootView: AnyView(ThemedRootView().environment(appState)),
             appState: appState,
             onClose: { [weak self] in self?.close() }
         )

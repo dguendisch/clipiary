@@ -40,6 +40,7 @@ final class AppState {
     let history: HistoryStore
     let permissionManager: AccessibilityPermissionManager
     let configManager: ConfigManager
+    let themeManager: ThemeManager
     var selectedTab: PopoverTab = .history
     var searchQuery = ""
     private var selectedItemIDByTab: [String: HistoryItem.ID] = [:]
@@ -66,10 +67,12 @@ final class AppState {
         let history = HistoryStore()
         let permissionManager = AccessibilityPermissionManager()
         let configManager = ConfigManager()
+        let themeManager = ThemeManager()
         self.settings = settings
         self.history = history
         self.permissionManager = permissionManager
         self.configManager = configManager
+        self.themeManager = themeManager
         let captureCoordinator = CaptureCoordinator(history: history, settings: settings)
         self.captureCoordinator = captureCoordinator
         self.clipboardMonitor = ClipboardMonitor(settings: settings, captureCoordinator: captureCoordinator)
@@ -84,12 +87,14 @@ final class AppState {
         settings: AppSettings,
         history: HistoryStore,
         configManager: ConfigManager,
-        permissionManager: AccessibilityPermissionManager
+        permissionManager: AccessibilityPermissionManager,
+        themeManager: ThemeManager = ThemeManager()
     ) {
         self.settings = settings
         self.history = history
         self.configManager = configManager
         self.permissionManager = permissionManager
+        self.themeManager = themeManager
         let captureCoordinator = CaptureCoordinator(history: history, settings: settings)
         self.captureCoordinator = captureCoordinator
         self.clipboardMonitor = ClipboardMonitor(settings: settings, captureCoordinator: captureCoordinator)
@@ -103,6 +108,10 @@ final class AppState {
     func start() {
         configManager.load()
         history.load()
+        themeManager.ensureDefaultTheme()
+        themeManager.load()
+        themeManager.selectTheme(id: settings.selectedThemeID)
+        themeManager.startWatching()
         restoreMissingTabs()
         seedConfigEntries()
         history.enforceLimit(settings.historyLimit)
@@ -112,10 +121,10 @@ final class AppState {
         captureCoordinator.startPasteMonitor()
         ensureSelection()
         synchronizeHistoryLimit()
+        synchronizeThemeSelection()
     }
 
     func refreshCopyOnSelectPermissions() {
-        permissionManager.requestAccessPrompt()
         permissionManager.openPrivacySettings()
     }
 
@@ -520,6 +529,21 @@ final class AppState {
                 self.history.enforceLimit(self.settings.historyLimit)
                 self.ensureSelection()
                 self.synchronizeHistoryLimit()
+            }
+        }
+    }
+
+    private func synchronizeThemeSelection() {
+        _ = withObservationTracking {
+            settings.selectedThemeID
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else {
+                    return
+                }
+
+                self.themeManager.selectTheme(id: self.settings.selectedThemeID)
+                self.synchronizeThemeSelection()
             }
         }
     }

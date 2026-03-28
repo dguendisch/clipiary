@@ -47,6 +47,7 @@ struct HistoryRowView: View {
     let itemLineLimit: Int
     let appState: AppState
 
+    @Environment(\.theme) private var theme
     @State private var isHovered = false
 
     var body: some View {
@@ -65,13 +66,13 @@ struct HistoryRowView: View {
                             } else {
                                 Image(systemName: item.isImage ? "photo" : item.source == .copyOnSelect ? "cursorarrow.rays" : "doc.on.doc")
                                     .font(.system(size: 11, weight: .semibold))
-                                    .foregroundStyle(item.isImage ? Color.orange : item.source == .copyOnSelect ? Color.accentColor : .secondary)
+                                    .foregroundStyle(item.isImage ? theme.resolvedImageIndicator : item.source == .copyOnSelect ? theme.resolvedAccent : .secondary)
                                     .frame(width: 16, height: 16, alignment: .center)
                             }
                             if showAppIcons, item.source == .copyOnSelect {
                                 Image(systemName: "cursorarrow.rays")
                                     .font(.system(size: 6, weight: .bold))
-                                    .foregroundStyle(Color.accentColor)
+                                    .foregroundStyle(theme.resolvedAccent)
                                     .offset(x: 4, y: 4)
                             }
                         }
@@ -80,7 +81,7 @@ struct HistoryRowView: View {
                             HStack(spacing: 5) {
                                 Image(systemName: "photo")
                                     .font(.system(size: 10, weight: .semibold))
-                                    .foregroundStyle(.orange)
+                                    .foregroundStyle(theme.resolvedImageIndicator)
                                 Text(item.text)
                                     .font(.system(size: 11, weight: .medium))
                                     .foregroundStyle(.secondary)
@@ -108,8 +109,8 @@ struct HistoryRowView: View {
                             .padding(.horizontal, 5)
                             .padding(.vertical, 2)
                             .background(
-                                RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                    .fill(Color.secondary.opacity(0.12))
+                                RoundedRectangle(cornerRadius: theme.cornerRadii.keyBadge, style: .continuous)
+                                    .fill(theme.resolvedPillBackground)
                             )
                     }
 
@@ -153,8 +154,8 @@ struct HistoryRowView: View {
                 .padding(.leading, 22)
             }
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 8)
+        .padding(.horizontal, theme.spacing.rowHorizontalPadding)
+        .padding(.vertical, theme.spacing.rowVerticalPadding)
         .frame(maxWidth: .infinity, alignment: .leading)
         .id(item.id)
         .anchorPreference(key: SelectedRowAnchorKey.self, value: .bounds) { anchor in
@@ -169,7 +170,7 @@ struct HistoryRowView: View {
             }
         }
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
                 .fill(rowFill)
         )
         .contentShape(Rectangle())
@@ -183,10 +184,10 @@ struct HistoryRowView: View {
 
     private var rowFill: Color {
         if isSelected {
-            return Color.accentColor.opacity(0.18)
+            return theme.resolvedRowSelected
         }
         if isHovered {
-            return Color.accentColor.opacity(0.09)
+            return theme.resolvedRowHovered
         }
         return .clear
     }
@@ -201,8 +202,8 @@ struct HistoryRowView: View {
 
         return HStack(spacing: 1.5) {
             ForEach(0..<totalSegments, id: \.self) { index in
-                RoundedRectangle(cornerRadius: 1)
-                    .fill(index < filled ? colors[index] : Color.secondary.opacity(0.15))
+                RoundedRectangle(cornerRadius: theme.cornerRadii.gauge)
+                    .fill(index < filled ? colors[index] : theme.resolvedGaugeUnfilled)
                     .frame(width: 3, height: 10)
             }
         }
@@ -225,7 +226,7 @@ struct HistoryRowView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
+            .foregroundStyle(item.isFavorite ? theme.resolvedAccent : .secondary)
             .opacity(isHovered || item.isFavorite ? 1 : 0.55)
         } else {
             Button {
@@ -237,7 +238,7 @@ struct HistoryRowView: View {
                     .frame(width: 22, height: 22)
             }
             .buttonStyle(.plain)
-            .foregroundStyle(item.isFavorite ? Color.accentColor : .secondary)
+            .foregroundStyle(item.isFavorite ? theme.resolvedAccent : .secondary)
             .opacity(isHovered || item.isFavorite ? 1 : 0.55)
         }
     }

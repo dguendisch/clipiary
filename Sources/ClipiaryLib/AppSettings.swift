@@ -27,6 +27,7 @@ final class AppSettings {
         static let itemLineLimit = "itemLineLimit"
         static let autoMonospaceFromTerminals = "autoMonospaceFromTerminals"
         static let terminalBundleIDs = "terminalBundleIDs"
+        static let selectedThemeID = "selectedThemeID"
     }
 
     static let defaultTerminalBundleIDsString = "com.apple.Terminal, com.googlecode.iterm2, com.mitchellh.ghostty, com.microsoft.VSCode, com.jetbrains.goland"
@@ -117,6 +118,10 @@ final class AppSettings {
         didSet { defaults.set(terminalBundleIDs, forKey: Keys.terminalBundleIDs) }
     }
 
+    var selectedThemeID: String {
+        didSet { defaults.set(selectedThemeID, forKey: Keys.selectedThemeID) }
+    }
+
     init(defaults: UserDefaults = .standard) {
         self.defaults = defaults
         defaults.register(defaults: [
@@ -141,6 +146,7 @@ final class AppSettings {
             Keys.itemLineLimit: 2,
             Keys.autoMonospaceFromTerminals: true,
             Keys.terminalBundleIDs: Self.defaultTerminalBundleIDsString,
+            Keys.selectedThemeID: "default",
         ])
 
         isClipboardMonitoringEnabled = defaults.bool(forKey: Keys.clipboardMonitoringEnabled)
@@ -164,6 +170,7 @@ final class AppSettings {
         itemLineLimit = defaults.integer(forKey: Keys.itemLineLimit)
         autoMonospaceFromTerminals = defaults.bool(forKey: Keys.autoMonospaceFromTerminals)
         terminalBundleIDs = defaults.string(forKey: Keys.terminalBundleIDs) ?? Self.defaultTerminalBundleIDsString
+        selectedThemeID = defaults.string(forKey: Keys.selectedThemeID) ?? "default"
     }
 
     var globalShortcut: GlobalShortcut {

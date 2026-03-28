@@ -28,6 +28,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 70)))
@@ -54,6 +55,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 70)))
@@ -81,6 +83,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 70)))
@@ -108,6 +111,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 50)))
@@ -134,6 +138,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 80)))
@@ -161,6 +166,7 @@ import Testing
             appState: appState
         )
         .environment(appState)
+        .environment(\.theme, .default)
         .frame(width: 350)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 350, height: 50)))
@@ -173,6 +179,7 @@ import Testing
         let appState = makeTestAppState()
         let view = SettingsView()
             .environment(appState)
+            .environment(\.theme, .default)
             .frame(width: 540, height: 490)
 
         assertSnapshot(of: NSHostingView(rootView: view), as: .image(size: .init(width: 540, height: 490)))

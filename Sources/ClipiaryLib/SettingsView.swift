@@ -8,6 +8,7 @@ struct SettingsView: View {
     private let itemLineLimitOptions = [1, 2, 3, 4]
 
     @Environment(AppState.self) private var appState
+    @Environment(\.theme) private var theme
 
     var body: some View {
         ScrollView {
@@ -25,7 +26,13 @@ struct SettingsView: View {
             .padding(16)
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .background(.regularMaterial)
+        .background {
+            if theme.options.useMaterial {
+                Rectangle().fill(.regularMaterial)
+            } else {
+                Rectangle().fill(theme.resolvedPanelFill)
+            }
+        }
     }
 
     // MARK: - Sections
@@ -95,6 +102,19 @@ struct SettingsView: View {
 
     private var appearanceSection: some View {
         settingsCard("Appearance") {
+            settingMetric(title: "Theme", help: "Themes are JSON files in ~/Library/Application Support/Clipiary/themes/. Copy and edit default.json to create your own.") {
+                Picker("", selection: Binding(
+                    get: { appState.settings.selectedThemeID },
+                    set: { appState.settings.selectedThemeID = $0 }
+                )) {
+                    ForEach(appState.themeManager.availableThemes, id: \.id) { theme in
+                        Text(theme.name).tag(theme.id)
+                    }
+                }
+                .labelsHidden()
+                .pickerStyle(.menu)
+            }
+
             settingsToggleRow(
                 title: "Show item details",
                 isOn: Binding(
@@ -270,12 +290,12 @@ struct SettingsView: View {
             .padding(10)
             .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
             .background(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .fill(Color.black.opacity(0.15))
+                RoundedRectangle(cornerRadius: theme.cornerRadii.card, style: .continuous)
+                    .fill(theme.resolvedCardBackground)
             )
             .overlay(
-                RoundedRectangle(cornerRadius: 10, style: .continuous)
-                    .stroke(Color.white.opacity(0.08), lineWidth: 1)
+                RoundedRectangle(cornerRadius: theme.cornerRadii.card, style: .continuous)
+                    .stroke(theme.resolvedCardStroke, lineWidth: 1)
             )
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .topLeading)
@@ -334,8 +354,8 @@ struct SettingsView: View {
                     .padding(.vertical, 4)
                     .frame(maxWidth: .infinity)
                     .background(
-                        RoundedRectangle(cornerRadius: 6, style: .continuous)
-                            .fill(isRecording ? Color.accentColor.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
+                        RoundedRectangle(cornerRadius: theme.cornerRadii.shortcutRecordField, style: .continuous)
+                            .fill(isRecording ? theme.resolvedAccent.opacity(0.12) : Color(nsColor: .controlBackgroundColor))
                     )
 
                 Button(isRecording ? "Cancel" : "Record") {
@@ -485,6 +505,16 @@ private final class SettingsPanel: NSPanel {
     }
 }
 
+private struct ThemedSettingsView: View {
+    @Environment(AppState.self) private var appState
+
+    var body: some View {
+        SettingsView()
+            .environment(\.theme, appState.themeManager.activeTheme)
+            .preferredColorScheme(appState.themeManager.activeTheme.colorScheme)
+    }
+}
+
 @MainActor
 final class SettingsWindowController {
     static let shared = SettingsWindowController()
@@ -501,7 +531,7 @@ final class SettingsWindowController {
             return
         }
 
-        let settingsView = SettingsView()
+        let settingsView = ThemedSettingsView()
             .environment(AppState.shared)
 
         let hostingView = NSHostingView(rootView: settingsView)
@@ -518,7 +548,6 @@ final class SettingsWindowController {
         window.minSize = NSSize(width: 460, height: 340)
         window.maxSize = NSSize(width: 700, height: 800)
         window.isReleasedWhenClosed = false
-        window.appearance = NSAppearance(named: .darkAqua)
         window.center()
         window.level = NSWindow.Level(rawValue: NSWindow.Level.floating.rawValue + 1)
 

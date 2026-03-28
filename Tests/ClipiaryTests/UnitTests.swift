@@ -1,4 +1,5 @@
 import Foundation
+import SwiftUI
 import Testing
 @testable import ClipiaryLib
 
@@ -13,11 +14,13 @@ func makeTestAppState() -> AppState {
     let history = HistoryStore(storageDirectory: tempDir)
     let configManager = ConfigManager(storageDirectory: tempDir)
     let permissionManager = AccessibilityPermissionManager()
+    let themeManager = ThemeManager(storageDirectory: tempDir)
     return AppState(
         settings: settings,
         history: history,
         configManager: configManager,
-        permissionManager: permissionManager
+        permissionManager: permissionManager,
+        themeManager: themeManager
     )
 }
 
@@ -377,5 +380,134 @@ func makeItem(
         let tabNames = appState.allTabs.map(\.id)
         #expect(tabNames.contains("fav:Snippets"))
         #expect(tabNames.contains("fav:Shell"))
+    }
+}
+
+// MARK: - Theme Tests
+
+@MainActor
+@Suite struct ThemeTests {
+    @Test func defaultThemeRoundTrips() throws {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(Theme.default)
+        let decoded = try JSONDecoder().decode(Theme.self, from: data)
+        #expect(decoded == Theme.default)
+    }
+
+    @Test func partialThemeDecodesWithDefaults() throws {
+        let json = """
+        { "id": "minimal", "name": "Minimal" }
+        """
+        let theme = try JSONDecoder().decode(Theme.self, from: Data(json.utf8))
+        #expect(theme.id == "minimal")
+        #expect(theme.name == "Minimal")
+        #expect(theme.options == Theme.Options.default)
+        #expect(theme.colors == Theme.Colors.default)
+        #expect(theme.cornerRadii == Theme.CornerRadii.default)
+        #expect(theme.spacing == Theme.Spacing.default)
+    }
+
+    @Test func partialColorsDecodesWithDefaults() throws {
+        let json = """
+        { "id": "custom", "name": "Custom", "colors": { "accent": "#FF0000" } }
+        """
+        let theme = try JSONDecoder().decode(Theme.self, from: Data(json.utf8))
+        #expect(theme.colors.accent == "#FF0000")
+        #expect(theme.colors.panelFill == Theme.Colors.default.panelFill)
+        #expect(theme.colors.rowSelectedOpacity == Theme.Colors.default.rowSelectedOpacity)
+    }
+
+    @Test func hexColorParsing() {
+        #expect(Color(hex: "#FF0000") != nil)
+        #expect(Color(hex: "#00FF00FF") != nil)
+        #expect(Color(hex: nil) == nil)
+        #expect(Color(hex: "") == nil)
+        #expect(Color(hex: "red") == nil)
+        #expect(Color(hex: "#ZZZ") == nil)
+    }
+
+    @Test func resolvedAccentUsesSystemWhenFlagSet() {
+        var theme = Theme.default
+        theme.options.useSystemAccent = true
+        #expect(theme.resolvedAccent == .accentColor)
+    }
+
+    @Test func selectedThemeIDDefaultsToDefault() {
+        let defaults = UserDefaults(suiteName: "test-\(UUID().uuidString)")!
+        let settings = AppSettings(defaults: defaults)
+        #expect(settings.selectedThemeID == "default")
+    }
+
+    @Test func selectedThemeIDPersists() {
+        let suiteName = "test-\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        let settings = AppSettings(defaults: defaults)
+        settings.selectedThemeID = "custom"
+
+        let settings2 = AppSettings(defaults: defaults)
+        #expect(settings2.selectedThemeID == "custom")
+    }
+}
+
+// MARK: - ThemeManager Tests
+
+@MainActor
+@Suite struct ThemeManagerTests {
+    private func makeTempManager() -> (ThemeManager, URL) {
+        let dir = FileManager.default.temporaryDirectory.appending(path: UUID().uuidString)
+        try! FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
+        return (ThemeManager(storageDirectory: dir), dir)
+    }
+
+    @Test func ensureDefaultThemeCreatesFile() {
+        let (manager, dir) = makeTempManager()
+        manager.ensureDefaultTheme()
+        let defaultURL = dir.appending(path: "themes/default.json")
+        #expect(FileManager.default.fileExists(atPath: defaultURL.path))
+        // All built-in themes should be written
+        for theme in Theme.builtInThemes {
+            let url = dir.appending(path: "themes/\(theme.id).json")
+            #expect(FileManager.default.fileExists(atPath: url.path))
+        }
+    }
+
+    @Test func loadFindsThemes() {
+        let (manager, _) = makeTempManager()
+        manager.ensureDefaultTheme()
+        manager.load()
+        #expect(manager.availableThemes.count == Theme.builtInThemes.count)
+        #expect(manager.availableThemes.contains { $0.id == "default" })
+    }
+
+    @Test func loadSkipsInvalidJSON() throws {
+        let (manager, dir) = makeTempManager()
+        manager.ensureDefaultTheme()
+        let badURL = dir.appending(path: "themes/bad.json")
+        try "not json".write(to: badURL, atomically: true, encoding: .utf8)
+        manager.load()
+        #expect(manager.availableThemes.count == Theme.builtInThemes.count)
+    }
+
+    @Test func selectThemeFallsBackToDefault() {
+        let (manager, _) = makeTempManager()
+        manager.ensureDefaultTheme()
+        manager.load()
+        manager.selectTheme(id: "nonexistent")
+        #expect(manager.activeTheme == .default)
+    }
+
+    @Test func selectThemePicksCorrectTheme() throws {
+        let (manager, dir) = makeTempManager()
+        manager.ensureDefaultTheme()
+        let custom = Theme(id: "custom", name: "Custom")
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys]
+        let data = try encoder.encode(custom)
+        try data.write(to: dir.appending(path: "themes/custom.json"))
+        manager.load()
+        manager.selectTheme(id: "custom")
+        #expect(manager.activeTheme.id == "custom")
+        #expect(manager.activeTheme.name == "Custom")
     }
 }

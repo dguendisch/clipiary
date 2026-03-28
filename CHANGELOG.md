@@ -1,6 +1,9 @@
 # Changelog
 
 ## [Unreleased]
+### Added
+- JSON-based theming system: customize colors, corner radii, and spacing via theme files in `~/Library/Application Support/Clipiary/themes/`. Copy and edit `default.json` to create your own themes.
+- Theme picker in Settings > Appearance
 
 ## [0.8.1] - 2026-03-27
 ### Added

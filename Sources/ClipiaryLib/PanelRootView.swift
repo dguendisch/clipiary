@@ -4,6 +4,7 @@ import UniformTypeIdentifiers
 
 struct PanelRootView: View {
     @Environment(AppState.self) private var appState
+    @Environment(\.theme) private var theme
     @FocusState private var searchFocused: Bool
     @State private var draggingItemID: HistoryItem.ID?
     @State private var dropTargetIndex: Int?
@@ -13,13 +14,13 @@ struct PanelRootView: View {
     @FocusState private var isDescriptionFieldFocused: Bool
 
     var body: some View {
-        VStack(spacing: 12) {
+        VStack(spacing: theme.spacing.sectionSpacing) {
             header
             historySection
             footer
         }
         .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(12)
+        .padding(theme.spacing.panelPadding)
         .frame(minWidth: 300, maxWidth: .infinity, minHeight: 400, maxHeight: .infinity)
         .background(panelBackground)
         .onChange(of: appState.searchFocusRequestID) {
@@ -67,7 +68,7 @@ struct PanelRootView: View {
                             historyGroup(title: "", items: items)
                         }
                     }
-                    .padding(10)
+                    .padding(theme.spacing.contentAreaPadding)
                 }
                 .scrollIndicators(.hidden)
                 .onAppear { overrideScrollerStyle() }
@@ -90,7 +91,7 @@ struct PanelRootView: View {
                 }
                 .frame(maxWidth: .infinity, maxHeight: .infinity)
                 .background(
-                    RoundedRectangle(cornerRadius: 12, style: .continuous)
+                    RoundedRectangle(cornerRadius: theme.cornerRadii.contentArea, style: .continuous)
                         .fill(panelFill)
                 )
                 .onChange(of: appState.selectedHistoryItemID) {
@@ -169,7 +170,7 @@ struct PanelRootView: View {
     private var accessibilityStatus: some View {
         HStack(spacing: 6) {
             Circle()
-                .fill(appState.permissionManager.isTrusted ? Color(nsColor: .systemGreen) : Color(nsColor: .systemOrange))
+                .fill(appState.permissionManager.isTrusted ? theme.resolvedStatusReady : theme.resolvedStatusWarning)
                 .frame(width: 6, height: 6)
             if appState.permissionManager.isTrusted {
                 Text(appState.settings.isCopyOnSelectEnabled ? "Copy-on-select ready" : "Clipboard only")
@@ -225,7 +226,7 @@ struct PanelRootView: View {
         .padding(.horizontal, 10)
         .frame(height: 30)
         .background(
-            RoundedRectangle(cornerRadius: 8, style: .continuous)
+            RoundedRectangle(cornerRadius: theme.cornerRadii.searchField, style: .continuous)
                 .fill(panelFill)
         )
     }
@@ -242,7 +243,7 @@ struct PanelRootView: View {
         let showingPicker = appState.showingFavoriteTabPicker
         let indexedItems = items.enumerated().map { ($0.offset, $0.element) }
 
-        return LazyVStack(spacing: 2) {
+        return LazyVStack(spacing: theme.spacing.rowSpacing) {
             ForEach(indexedItems, id: \.1.id) { index, item in
                 VStack(spacing: 0) {
                     if dropTargetIndex == index, draggingItemID != item.id {
@@ -295,7 +296,7 @@ struct PanelRootView: View {
 
     private var dropIndicator: some View {
         RoundedRectangle(cornerRadius: 1)
-            .fill(Color.accentColor)
+            .fill(theme.resolvedAccent)
             .frame(height: 2)
             .padding(.horizontal, 8)
             .padding(.vertical, 2)
@@ -361,13 +362,19 @@ struct PanelRootView: View {
         .frame(width: 260)
     }
 
+    @ViewBuilder
     private var panelBackground: some View {
-        RoundedRectangle(cornerRadius: 14, style: .continuous)
-            .fill(.regularMaterial)
+        if theme.options.useMaterial {
+            RoundedRectangle(cornerRadius: theme.cornerRadii.panel, style: .continuous)
+                .fill(.regularMaterial)
+        } else {
+            RoundedRectangle(cornerRadius: theme.cornerRadii.panel, style: .continuous)
+                .fill(theme.resolvedPanelFill)
+        }
     }
 
     private var panelFill: Color {
-        Color(nsColor: .controlBackgroundColor).opacity(0.85)
+        theme.resolvedPanelFill
     }
 
     private var emptyMessage: String {
@@ -396,8 +403,8 @@ struct PanelRootView: View {
         }
         .padding(4)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
-                .fill(Color.black.opacity(0.05))
+            RoundedRectangle(cornerRadius: theme.cornerRadii.tabBar, style: .continuous)
+                .fill(theme.resolvedTabBarBackground)
         )
     }
 
@@ -424,7 +431,7 @@ struct PanelRootView: View {
             .padding(.vertical, 6)
             .frame(maxWidth: .infinity)
             .background(
-                RoundedRectangle(cornerRadius: 8, style: .continuous)
+                RoundedRectangle(cornerRadius: theme.cornerRadii.tabButton, style: .continuous)
                     .fill(isSelected ? panelFill : Color.clear)
             )
             .contentShape(Rectangle())
@@ -486,7 +493,7 @@ struct PanelRootView: View {
             }()
 
             ZStack {
-                Color.black.opacity(0.15)
+                theme.resolvedOverlayBackdrop
                     .ignoresSafeArea()
                     .onTapGesture {
                         appState.showingFavoriteTabPicker = false
@@ -522,8 +529,8 @@ struct PanelRootView: View {
                 .padding(.horizontal, 8)
                 .padding(.vertical, 6)
                 .background(
-                    RoundedRectangle(cornerRadius: 6, style: .continuous)
-                        .fill(isFocused ? Color.accentColor.opacity(0.18) : Color.clear)
+                    RoundedRectangle(cornerRadius: theme.cornerRadii.pickerRow, style: .continuous)
+                        .fill(isFocused ? theme.resolvedRowSelected : Color.clear)
                 )
                 .contentShape(Rectangle())
                 .onTapGesture {
@@ -555,8 +562,8 @@ struct PanelRootView: View {
                         .padding(.horizontal, 5)
                         .padding(.vertical, 2)
                         .background(
-                            RoundedRectangle(cornerRadius: 3, style: .continuous)
-                                .fill(Color.secondary.opacity(0.12))
+                            RoundedRectangle(cornerRadius: theme.cornerRadii.keyBadge, style: .continuous)
+                                .fill(theme.resolvedPillBackground)
                         )
                 }
             }
@@ -671,12 +678,12 @@ struct PanelRootView: View {
         .padding(10)
         .frame(width: 240)
         .background(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: theme.cornerRadii.card, style: .continuous)
                 .fill(.regularMaterial)
                 .shadow(color: .black.opacity(0.2), radius: 12, y: 4)
         )
         .overlay(
-            RoundedRectangle(cornerRadius: 10, style: .continuous)
+            RoundedRectangle(cornerRadius: theme.cornerRadii.card, style: .continuous)
                 .stroke(Color.primary.opacity(0.15), lineWidth: 1)
         )
         .onAppear {
@@ -704,7 +711,7 @@ struct PanelRootView: View {
                 .padding(.vertical, 4)
                 .background(
                     Capsule(style: .continuous)
-                        .fill(Color.black.opacity(0.06))
+                        .fill(theme.resolvedShortcutKeyBackground)
                 )
                 .foregroundStyle(.secondary)
         }
