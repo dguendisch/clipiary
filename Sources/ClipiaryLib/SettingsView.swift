@@ -28,9 +28,9 @@ struct SettingsView: View {
         .frame(maxWidth: .infinity, maxHeight: .infinity)
         .background {
             if theme.options.useMaterial {
-                Rectangle().fill(.regularMaterial)
+                Rectangle().fill(.regularMaterial).ignoresSafeArea()
             } else {
-                Rectangle().fill(theme.resolvedPanelFill)
+                Rectangle().fill(theme.resolvedPanelFill).ignoresSafeArea()
             }
         }
     }
@@ -543,15 +543,16 @@ final class SettingsWindowController {
             .environment(AppState.shared)
 
         let hostingView = NSHostingView(rootView: settingsView)
-        hostingView.frame = NSRect(x: 0, y: 0, width: 540, height: 550)
+        hostingView.frame = NSRect(x: 0, y: 0, width: 540, height: 580)
 
         let window = SettingsPanel(
-            contentRect: NSRect(x: 0, y: 0, width: 540, height: 550),
-            styleMask: [.titled, .closable, .resizable],
+            contentRect: NSRect(x: 0, y: 0, width: 540, height: 580),
+            styleMask: [.titled, .closable, .resizable, .fullSizeContentView],
             backing: .buffered,
             defer: false
         )
         window.title = "Clipiary Settings"
+        window.titlebarAppearsTransparent = true
         window.contentView = hostingView
         window.minSize = NSSize(width: 460, height: 340)
         window.maxSize = NSSize(width: 700, height: 800)
