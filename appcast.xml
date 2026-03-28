@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
-<rss xmlns:ns0="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Clipiary</title><item><title>Version 0.8.1</title><ns0:version>0.8.1</ns0:version><ns0:shortVersionString>0.8.1</ns0:shortVersionString><description ns0:format="markdown">### Added
-- Update button now shows when an update is available
-- Text settings now contain a preview of the configured text
-- Configurable ignored-apps list (via their bundle IDs)
-- Skip also clipboard items marked as `org.nspasteboard.TransientType` (e.g. OTP codes or passwords used by password manager's browser extensions)
-</description><pubDate>Fri, 27 Mar 2026 14:31:47 +0000</pubDate><enclosure url="https://github.com/liamhess/clipiary/releases/download/v0.8.1/Clipiary-0.8.1.zip" ns0:edSignature="QobRcFt059R5lVmDHZUTiheVRRv0YxK5ZYy1y6dquZJd5qpjSh6DJxWmsEF5iLZVrMQU+EUHdwGLzBDQPTFuAg==" length="1832617" type="application/octet-stream" /></item></channel></rss>
+<rss xmlns:ns0="http://www.andymatuschak.org/xml-namespaces/sparkle" version="2.0" xmlns:sparkle="http://www.andymatuschak.org/xml-namespaces/sparkle"><channel><title>Clipiary</title><item><title>Version 0.9.0</title><ns0:version>0.9.0</ns0:version><ns0:shortVersionString>0.9.0</ns0:shortVersionString><description ns0:format="markdown">### Added
+- Favorite tab name badges on history rows (configurable in Settings &gt; Appearance)
+- JSON-based theming system: customize colors, corner radii, and spacing via theme files in `~/Library/Application Support/Clipiary/themes/`. Copy and edit `default.json` to create your own themes.
+- Theme picker in Settings &gt; Appearance
+- Improved hints when accessibility permissions are missing
+</description><pubDate>Sat, 28 Mar 2026 15:38:34 +0000</pubDate><enclosure url="https://github.com/liamhess/clipiary/releases/download/v0.9.0/Clipiary-0.9.0.zip" ns0:edSignature="1f5MwNEf7lYqrEZA9a+ClESWRKiM9VGlyZqG5d3FJqjjg5CwD3XKT87o6N0n1xUaE5PiLMMfxdCJW2Lkh6x9Bg==" length="1910544" type="application/octet-stream" /></item></channel></rss>

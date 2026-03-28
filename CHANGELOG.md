@@ -1,6 +1,8 @@
 # Changelog
 
 ## [Unreleased]
+
+## [0.9.0] - 2026-03-28
 ### Added
 - Favorite tab name badges on history rows (configurable in Settings > Appearance)
 - JSON-based theming system: customize colors, corner radii, and spacing via theme files in `~/Library/Application Support/Clipiary/themes/`. Copy and edit `default.json` to create your own themes.
