@@ -9,6 +9,11 @@ struct ThemeFill: Codable, Sendable, Equatable {
     var from: String?
     var to: String?
     var opacity: Double?
+    // MeshGradient (macOS 15+)
+    var mesh: [String]?
+    var meshColumns: Int?
+    var meshRows: Int?
+    var meshPoints: [[Double]]?
 
     static func solid(_ hex: String, opacity: Double? = nil) -> ThemeFill {
         ThemeFill(color: hex, opacity: opacity)
@@ -18,8 +23,37 @@ struct ThemeFill: Codable, Sendable, Equatable {
         ThemeFill(gradient: colors, from: from, to: to, opacity: opacity)
     }
 
+    static func meshGradient(_ colors: [String], columns: Int, rows: Int, points: [[Double]]? = nil, opacity: Double? = nil) -> ThemeFill {
+        ThemeFill(opacity: opacity, mesh: colors, meshColumns: columns, meshRows: rows, meshPoints: points)
+    }
+
     func resolved(fallback: Color, defaultOpacity: Double = 1.0) -> AnyShapeStyle {
         let op = opacity ?? defaultOpacity
+        if let meshColors = mesh, let cols = meshColumns, let rows = meshRows, cols * rows == meshColors.count {
+            let colors = meshColors.compactMap { Color(hex: $0) }
+            guard colors.count == cols * rows else { return AnyShapeStyle(fallback.opacity(op)) }
+            if #available(macOS 15, *) {
+                let pts: [SIMD2<Float>]
+                if let custom = meshPoints, custom.count == cols * rows {
+                    pts = custom.map { pair in SIMD2<Float>(Float(pair[0]), Float(pair[1])) }
+                } else {
+                    pts = (0..<rows).flatMap { row in
+                        (0..<cols).map { col in
+                            SIMD2<Float>(
+                                cols > 1 ? Float(col) / Float(cols - 1) : 0.5,
+                                rows > 1 ? Float(row) / Float(rows - 1) : 0.5
+                            )
+                        }
+                    }
+                }
+                return AnyShapeStyle(MeshGradient(width: cols, height: rows, points: pts, colors: colors).opacity(op))
+            }
+            // macOS 14 fallback: diagonal linear gradient from top-left to bottom-right corner colors
+            return AnyShapeStyle(LinearGradient(
+                colors: [colors[0], colors[cols * rows - 1]],
+                startPoint: .topLeading, endPoint: .bottomTrailing
+            ).opacity(op))
+        }
         if let gradient, gradient.count >= 2 {
             let colors = gradient.compactMap { Color(hex: $0) }
             guard colors.count >= 2 else { return AnyShapeStyle(fallback.opacity(op)) }
@@ -632,6 +666,7 @@ struct Theme: Codable, Sendable, Equatable {
             card: .solid("#000000", opacity: 0.15),
             overlay: .solid("#000000", opacity: 0.15)
         ),
+        colors: Colors(searchHighlight: "#FFCC00"),
         borders: Borders(
             selectedRow: ThemeBorder(color: "#FFFFFF", width: 1, opacity: 0.4, dash: [6, 1])
         ),
@@ -646,8 +681,78 @@ struct Theme: Codable, Sendable, Equatable {
         )
     )
 
+    static let deepSpace = Theme(
+        id: "deep-space",
+        name: "Deep Space",
+        options: Options(useMaterial: false, useSystemAccent: true),
+        fills: Fills(
+            panel: .meshGradient(
+                ["#200010", "#100030", "#001020",
+                 "#280020", "#0C1840", "#003030",
+                 "#100010", "#080C28", "#041818"],
+                columns: 3, rows: 3
+            ),
+            tabBar: .solid("#000000", opacity: 0.05),
+            rowSelected: ThemeFill(opacity: 0.18),
+            rowHovered: ThemeFill(opacity: 0.09),
+            card: .solid("#000000", opacity: 0.15),
+            overlay: .solid("#000000", opacity: 0.15)
+        ),
+        colors: Colors(searchHighlight: "#FFCC00"),
+        borders: Borders(
+            selectedRow: ThemeBorder(color: "#FFFFFF", width: 1, opacity: 0.4, dash: [6, 1])
+        ),
+        effects: Effects(
+            selectedRowGlow: ThemeGlow(color: "#FF6A00", radius: 6, opacity: 0.8),
+            hoveredRowGlow: ThemeGlow(color: "#FF0000", radius: 5, opacity: 1.0)
+        ),
+        spacing: Spacing(
+            panelPadding: 10, sectionSpacing: 10,
+            rowHorizontalPadding: 8, rowVerticalPadding: 6,
+            contentAreaPadding: 8, rowSpacing: 1
+        )
+    )
+
+    static let nebula = Theme(
+        id: "nebula",
+        name: "Nebula",
+        options: Options(useMaterial: false, useSystemAccent: false),
+        fills: Fills(
+            // 3×3 MeshGradient: violet → ocean blue → teal, top to bottom
+            panel: .meshGradient(
+                ["#120030", "#0A1A40", "#003030",
+                 "#1E0048", "#0C1E48", "#004040",
+                 "#0A0818", "#081428", "#041818"],
+                columns: 3, rows: 3
+            ),
+            tabBar: .solid("#040A18", opacity: 0.5),
+            rowSelected: .solid("#4EA8DE", opacity: 0.15),
+            rowHovered: .solid("#4EA8DE", opacity: 0.07),
+            card: .solid("#040A18", opacity: 0.5),
+            overlay: .solid("#030810", opacity: 0.6)
+        ),
+        colors: Colors(
+            accent: "#4EA8DE",
+            pillBackground: "#4EA8DE", pillBackgroundOpacity: 0.12,
+            shortcutKeyBackground: "#080820", shortcutKeyBackgroundOpacity: 0.5,
+            cardStroke: "#4EA8DE", cardStrokeOpacity: 0.08,
+            imageIndicator: "#7DCFFF",
+            statusReady: "#73DACA", statusWarning: "#E0AF68",
+            gaugeUnfilled: "#4EA8DE", gaugeUnfilledOpacity: 0.12
+        ),
+        effects: Effects(
+            selectedRowGlow: ThemeGlow(color: "#4EA8DE", radius: 6, opacity: 0.25),
+            panelGlow: ThemeGlow(color: "#1E0048", radius: 24, opacity: 0.35)
+        ),
+        cornerRadii: CornerRadii(
+            panel: 16, contentArea: 14, card: 12, tabBar: 12,
+            row: 10, searchField: 10, tabButton: 10,
+            pickerRow: 8, shortcutRecordField: 8, keyBadge: 4, gauge: 2
+        )
+    )
+
     static let builtInThemes: [Theme] = [
-        .default, .macOSLight, .moonlight, .rose, .nord, .emerald, .neonNoir, .sciFi, .space, .vapor,
+        .default, .macOSLight, .moonlight, .rose, .nord, .emerald, .neonNoir, .sciFi, .space, .deepSpace, .vapor, .nebula,
     ]
 
     // MARK: - Initializers
