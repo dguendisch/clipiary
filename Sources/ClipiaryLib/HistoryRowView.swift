@@ -50,6 +50,8 @@ struct HistoryRowView: View {
 
     @Environment(\.theme) private var theme
     @State private var isHovered = false
+    @State private var borderFlash: Double = 0
+    @State private var sweepStartDate: Date? = nil
 
     private var searchTerms: [String] {
         appState.searchQuery
@@ -200,9 +202,40 @@ struct HistoryRowView: View {
         .overlay {
             let border = theme.resolvedSelectedRowBorder
             if isSelected, border.isVisible {
-                RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
-                    .stroke(border.color, style: border.strokeStyle)
+                if border.animation == "sweep" {
+                    TimelineView(.animation(minimumInterval: 1.0 / 60.0)) { timeline in
+                        let elapsed = sweepStartDate.map { timeline.date.timeIntervalSince($0) } ?? 0
+                        let duration = border.animationDuration
+                        let p = min(elapsed / duration, 0.7)
+                        ZStack {
+                            // Static full border always visible
+                            RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
+                                .stroke(border.color, style: border.strokeStyle)
+                            // Two bright pulses: A from top-left, B from bottom-right, meeting in the middle
+                            RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
+                                .trim(from: max(0, p - 0.2), to: min(p, 0.5))
+                                .stroke(border.color, style: StrokeStyle(lineWidth: border.width))
+                                .brightness(0.7)
+                            RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
+                                .trim(from: 0.5 + max(0, p - 0.2), to: 0.5 + min(p, 0.5))
+                                .stroke(border.color, style: StrokeStyle(lineWidth: border.width))
+                                .brightness(0.7)
+                        }
+                    }
+                    .onAppear { sweepStartDate = Date() }
+                    .onDisappear { sweepStartDate = nil }
+                } else {
+                    RoundedRectangle(cornerRadius: theme.cornerRadii.row, style: .continuous)
+                        .stroke(border.color, style: border.strokeStyle)
+                        .brightness(border.animation == "flash" ? borderFlash : 0)
+                }
             }
+        }
+        .onChange(of: isSelected) { _, selected in
+            let border = theme.resolvedSelectedRowBorder
+            guard selected, border.animation == "flash" else { return }
+            borderFlash = 1.0
+            withAnimation(.easeOut(duration: border.animationDuration).delay(0.05)) { borderFlash = 0 }
         }
         .compositingGroup()
         .overlay {

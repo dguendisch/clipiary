@@ -90,6 +90,10 @@ struct ThemeBorder: Codable, Sendable, Equatable {
     var width: CGFloat?
     var opacity: Double?
     var dash: [CGFloat]?
+    /// Animation style: `"flash"` (brightness pulse) or `"sweep"` (draw-on from top-left + bottom-right).
+    var animation: String?
+    /// Duration of the border animation in seconds. Defaults to 0.6 for sweep, 0.6 for flash.
+    var animationDuration: Double?
 }
 
 struct ThemeGlow: Codable, Sendable, Equatable {
@@ -939,15 +943,17 @@ extension Theme {
         let color: Color
         let width: CGFloat
         let dash: [CGFloat]
+        let animation: String?
+        let animationDuration: Double
 
         var strokeStyle: StrokeStyle { StrokeStyle(lineWidth: width, dash: dash) }
         var isVisible: Bool { width > 0 }
     }
 
     func resolvedBorder(_ border: ThemeBorder?, fallbackColor: Color = .clear, fallbackWidth: CGFloat = 0) -> ResolvedBorder {
-        guard let border else { return ResolvedBorder(color: fallbackColor, width: fallbackWidth, dash: []) }
+        guard let border else { return ResolvedBorder(color: fallbackColor, width: fallbackWidth, dash: [], animation: nil, animationDuration: 0.6) }
         let color = (Color(hex: border.color) ?? fallbackColor).opacity(border.opacity ?? 1.0)
-        return ResolvedBorder(color: color, width: border.width ?? fallbackWidth, dash: border.dash ?? [])
+        return ResolvedBorder(color: color, width: border.width ?? fallbackWidth, dash: border.dash ?? [], animation: border.animation, animationDuration: border.animationDuration ?? 0.6)
     }
 
     var resolvedPanelBorder: ResolvedBorder { resolvedBorder(borders.panel) }

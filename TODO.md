@@ -2,8 +2,10 @@
 
 - think about rich-text handling (currently only plain text and images are supported, no rich text)
 - move to top on paste to exclude direct shortcut pasted items?
+- better app icon
 
 ## Theme Ideas
+### One time animation of item selection border
 
 ### Color manipulation
 - `.saturation(_:)` — 0 for grayscale, >1 for oversaturation; expose as theme option for hover/selection states

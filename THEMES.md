@@ -128,6 +128,8 @@ Per-element border definitions. Each is an object or `null` (no border). By defa
 | `width` | number | `0` | Stroke width in points. `0` = no border. |
 | `opacity` | number | `1.0` | Opacity applied to the border color. |
 | `dash` | [number] | `null` | Dash pattern, e.g. `[5, 3]` for dashed. `null` = solid. |
+| `animation` | string | `null` | One-shot animation when the row becomes selected. `"flash"` = brightness pulse. `"sweep"` = border draws on simultaneously from the top-left and bottom-right, meeting in the middle. |
+| `animationDuration` | number | `0.6` | Duration of the border animation in seconds. |
 
 ### Border slots
 
