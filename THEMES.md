@@ -81,8 +81,9 @@ On macOS 14, mesh gradient fills fall back to a diagonal linear gradient between
 
 | Field | Default | Where it appears |
 |---|---|---|
-| `panel` | `#1E1E1E` @ 0.85 | Main panel background (when material is off), content scroll area, search field, active tab button. |
+| `panel` | `#1E1E1E` @ 0.85 | Main panel background (when material is off), content scroll area, search field. |
 | `tabBar` | `#000000` @ 0.05 | Tab bar strip behind the History/Favorites tabs. |
+| `tabButtonSelected` | panel fill | Background of the active tab button. Defaults to `fills.panel` when omitted — useful when the panel uses a mesh gradient and you want a flat color inside the tab bar instead. |
 | `rowSelected` | accent @ 0.18 | Background of the currently selected clipboard row. |
 | `rowHovered` | accent @ 0.09 | Background of a row on mouse hover. |
 | `card` | `#000000` @ 0.15 | Settings card backgrounds. |

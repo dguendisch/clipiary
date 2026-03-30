@@ -392,6 +392,7 @@ struct PanelRootView: View {
                 shortcutRow("Restore selected item", "Return")
                 shortcutRow("Preview selected item", "Space")
                 shortcutRow("Delete selected item", "Delete / ⌫")
+                shortcutRow("Reload theme", "Ctrl R")
                 shortcutRow("Close popover", "Esc")
             }
         }
@@ -527,7 +528,7 @@ struct PanelRootView: View {
             .frame(maxWidth: .infinity)
             .background(
                 RoundedRectangle(cornerRadius: theme.cornerRadii.tabButton, style: .continuous)
-                    .fill(isSelected ? panelFill : AnyShapeStyle(Color.clear))
+                    .fill(isSelected ? theme.resolvedTabButtonSelectedFill : AnyShapeStyle(Color.clear))
             )
             .contentShape(Rectangle())
         }

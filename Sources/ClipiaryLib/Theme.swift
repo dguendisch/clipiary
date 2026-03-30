@@ -158,6 +158,7 @@ struct Theme: Codable, Sendable, Equatable {
     struct Fills: Codable, Sendable, Equatable {
         var panel: ThemeFill
         var tabBar: ThemeFill
+        var tabButtonSelected: ThemeFill?
         var rowSelected: ThemeFill
         var rowHovered: ThemeFill
         var card: ThemeFill
@@ -166,6 +167,7 @@ struct Theme: Codable, Sendable, Equatable {
         static let `default` = Fills(
             panel: .solid("#1E1E1E", opacity: 0.85),
             tabBar: .solid("#000000", opacity: 0.05),
+            tabButtonSelected: nil,
             rowSelected: ThemeFill(opacity: 0.18),
             rowHovered: ThemeFill(opacity: 0.09),
             card: .solid("#000000", opacity: 0.15),
@@ -175,6 +177,7 @@ struct Theme: Codable, Sendable, Equatable {
         init(
             panel: ThemeFill = Self.default.panel,
             tabBar: ThemeFill = Self.default.tabBar,
+            tabButtonSelected: ThemeFill? = nil,
             rowSelected: ThemeFill = Self.default.rowSelected,
             rowHovered: ThemeFill = Self.default.rowHovered,
             card: ThemeFill = Self.default.card,
@@ -182,6 +185,7 @@ struct Theme: Codable, Sendable, Equatable {
         ) {
             self.panel = panel
             self.tabBar = tabBar
+            self.tabButtonSelected = tabButtonSelected
             self.rowSelected = rowSelected
             self.rowHovered = rowHovered
             self.card = card
@@ -193,6 +197,7 @@ struct Theme: Codable, Sendable, Equatable {
             let d = Self.default
             panel = try container.decodeIfPresent(ThemeFill.self, forKey: .panel) ?? d.panel
             tabBar = try container.decodeIfPresent(ThemeFill.self, forKey: .tabBar) ?? d.tabBar
+            tabButtonSelected = try container.decodeIfPresent(ThemeFill.self, forKey: .tabButtonSelected)
             rowSelected = try container.decodeIfPresent(ThemeFill.self, forKey: .rowSelected) ?? d.rowSelected
             rowHovered = try container.decodeIfPresent(ThemeFill.self, forKey: .rowHovered) ?? d.rowHovered
             card = try container.decodeIfPresent(ThemeFill.self, forKey: .card) ?? d.card
@@ -856,6 +861,13 @@ extension Theme {
 
     var resolvedTabBarFill: AnyShapeStyle {
         fills.tabBar.resolved(fallback: .black, defaultOpacity: 0.05)
+    }
+
+    var resolvedTabButtonSelectedFill: AnyShapeStyle {
+        if let fill = fills.tabButtonSelected {
+            return fill.resolved(fallback: Color(nsColor: .controlBackgroundColor), defaultOpacity: 1.0)
+        }
+        return resolvedPanelFill
     }
 
     var resolvedRowSelectedFill: AnyShapeStyle {
