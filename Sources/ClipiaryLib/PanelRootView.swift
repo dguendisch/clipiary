@@ -12,6 +12,8 @@ struct PanelRootView: View {
     @State private var selectedRowRect: CGRect = .zero
     @State private var snippetDescriptionText: String = ""
     @FocusState private var isDescriptionFieldFocused: Bool
+    @State private var itemEditText: String = ""
+    @FocusState private var isItemTextEditorFocused: Bool
 
     var body: some View {
         VStack(spacing: theme.spacing.sectionSpacing) {
@@ -577,28 +579,37 @@ struct PanelRootView: View {
 
     private func favoriteTabPickerOverlay(anchor: Anchor<CGRect>?) -> some View {
         GeometryReader { geometry in
-            let overlayOrigin: CGPoint = {
-                guard let anchor else {
-                    return CGPoint(x: geometry.size.width / 2, y: geometry.size.height / 2)
-                }
-                let rowRect = geometry[anchor]
-                return CGPoint(
-                    x: rowRect.midX,
-                    y: rowRect.maxY
-                )
-            }()
-
-            ZStack {
+            let (leadingOffset, topOffset) = pickerOffset(anchor: anchor, geometry: geometry)
+            ZStack(alignment: .topLeading) {
                 Rectangle().fill(theme.resolvedOverlayFill)
                     .ignoresSafeArea()
                     .onTapGesture {
+                        NSApp.keyWindow?.makeFirstResponder(nil)
                         appState.showingFavoriteTabPicker = false
+                        appState.requestSearchFocus()
                     }
 
                 favoriteTabPickerContent
-                    .position(x: overlayOrigin.x, y: overlayOrigin.y)
+                    .offset(x: leadingOffset, y: topOffset)
             }
         }
+    }
+
+    private func pickerOffset(anchor: Anchor<CGRect>?, geometry: GeometryProxy) -> (CGFloat, CGFloat) {
+        let pickerWidth: CGFloat = 240
+        let panelWidth = geometry.size.width
+        let originX: CGFloat
+        let originY: CGFloat
+        if let anchor {
+            let rowRect = geometry[anchor]
+            originX = rowRect.midX
+            originY = rowRect.maxY + 4
+        } else {
+            originX = panelWidth / 2
+            originY = geometry.size.height / 2
+        }
+        let clampedX = min(max(originX, pickerWidth / 2 + 8), panelWidth - pickerWidth / 2 - 8)
+        return (clampedX - pickerWidth / 2, originY)
     }
 
     private var favoriteTabPickerContent: some View {
@@ -662,6 +673,43 @@ struct PanelRootView: View {
                                 .fill(theme.resolvedPillBackground)
                         )
                 }
+            }
+            .padding(.horizontal, 8)
+            .padding(.vertical, 4)
+
+            Divider()
+                .padding(.vertical, 2)
+
+            VStack(alignment: .leading, spacing: 4) {
+                HStack(spacing: 6) {
+                    Text("Edit text")
+                        .font(.system(size: 11))
+                        .foregroundStyle(.secondary)
+                    Spacer()
+                    if !isItemTextEditorFocused {
+                        Text("E")
+                            .font(.system(size: 9, weight: .semibold, design: .monospaced))
+                            .padding(.horizontal, 5)
+                            .padding(.vertical, 2)
+                            .background(
+                                RoundedRectangle(cornerRadius: theme.cornerRadii.keyBadge, style: .continuous)
+                                    .fill(theme.resolvedPillBackground)
+                            )
+                    }
+                }
+                TextEditor(text: $itemEditText)
+                    .font(.system(size: 11))
+                    .focused($isItemTextEditorFocused)
+                    .frame(height: 60)
+                    .scrollContentBackground(.hidden)
+                    .background(Color.secondary.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 6, style: .continuous))
+                    .onChange(of: isItemTextEditorFocused) { _, focused in
+                        appState.isEditingItemText = focused
+                        if !focused {
+                            appState.setItemText(itemEditText)
+                        }
+                    }
             }
             .padding(.horizontal, 8)
             .padding(.vertical, 4)
@@ -784,13 +832,18 @@ struct PanelRootView: View {
         )
         .onAppear {
             snippetDescriptionText = appState.selectedItem?.snippetDescription ?? ""
+            itemEditText = appState.selectedItem?.text ?? ""
         }
         .onChange(of: appState.isEditingSnippetDescription) { _, editing in
             isDescriptionFieldFocused = editing
         }
+        .onChange(of: appState.isEditingItemText) { _, editing in
+            isItemTextEditorFocused = editing
+        }
         .onChange(of: appState.showingFavoriteTabPicker) { _, showing in
             if !showing {
                 isDescriptionFieldFocused = false
+                isItemTextEditorFocused = false
             }
         }
     }

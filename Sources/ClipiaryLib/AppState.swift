@@ -51,6 +51,7 @@ final class AppState {
     var favoriteTabPickerIndex = 0
     var isRecordingItemShortcut = false
     var isEditingSnippetDescription = false
+    var isEditingItemText = false
     var itemShortcutError: String?
     private(set) var itemShortcutsChangedID = 0
     private(set) var searchFocusRequestID = 0
@@ -356,6 +357,11 @@ final class AppState {
     func setSnippetDescription(_ description: String?) {
         guard let item = selectedItem else { return }
         history.setSnippetDescription(description, for: item)
+    }
+
+    func setItemText(_ text: String) {
+        guard let item = selectedItem else { return }
+        history.setText(text, for: item)
     }
 
     func startRecordingItemShortcut() {

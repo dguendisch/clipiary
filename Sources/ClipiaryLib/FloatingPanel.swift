@@ -131,7 +131,24 @@ final class FloatingPanel: NSPanel {
     }
 
     override func sendEvent(_ event: NSEvent) {
-        if event.type == .keyDown, appState.showingFavoriteTabPicker, !appState.isRecordingItemShortcut, !appState.isEditingSnippetDescription {
+        // When editing item text, intercept Return to commit + defocus; let Escape close the picker
+        if event.type == .keyDown, appState.showingFavoriteTabPicker, appState.isEditingItemText {
+            let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
+            if modifiers.isDisjoint(with: [.command, .option, .control]) {
+                switch event.keyCode {
+                case 36: // Return — commit edit
+                    appState.isEditingItemText = false
+                    makeFirstResponder(nil)
+                    return
+                case 53: // Escape — close picker
+                    close()
+                    return
+                default:
+                    break
+                }
+            }
+        }
+        if event.type == .keyDown, appState.showingFavoriteTabPicker, !appState.isRecordingItemShortcut, !appState.isEditingSnippetDescription, !appState.isEditingItemText {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if modifiers.isDisjoint(with: [.command, .option, .control]) {
                 switch event.keyCode {
@@ -147,6 +164,8 @@ final class FloatingPanel: NSPanel {
                     appState.startRecordingItemShortcut()
                 case 2: // D
                     appState.isEditingSnippetDescription = true
+                case 14: // E
+                    appState.isEditingItemText = true
                 case 51: // Delete/Backspace
                     appState.removeItemShortcut()
                 case 53: // Escape
@@ -190,7 +209,9 @@ final class FloatingPanel: NSPanel {
             appState.showingFavoriteTabPicker = false
             appState.isRecordingItemShortcut = false
             appState.isEditingSnippetDescription = false
+            appState.isEditingItemText = false
             appState.itemShortcutError = nil
+            makeFirstResponder(nil)
             appState.requestSearchFocus()
             return
         }

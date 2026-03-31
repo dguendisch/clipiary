@@ -152,6 +152,14 @@ final class HistoryStore {
         persist()
     }
 
+    func setText(_ text: String, for item: HistoryItem) {
+        guard let index = items.firstIndex(where: { $0.id == item.id }) else { return }
+        let trimmed = text.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return }
+        items[index].text = trimmed
+        persist()
+    }
+
     func seedEntries(for tabConfig: FavoritesTabConfig) {
         guard let entries = tabConfig.entries else { return }
         for entry in entries {
