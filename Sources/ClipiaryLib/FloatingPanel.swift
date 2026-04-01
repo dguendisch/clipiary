@@ -136,10 +136,12 @@ final class FloatingPanel: NSPanel {
             let modifiers = event.modifierFlags.intersection(.deviceIndependentFlagsMask)
             if modifiers.isDisjoint(with: [.command, .option, .control]) {
                 switch event.keyCode {
-                case 36: // Return — commit edit
-                    appState.isEditingItemText = false
-                    makeFirstResponder(nil)
-                    return
+                case 36: // Return — commit edit; Shift+Return passes through to insert newline
+                    if !modifiers.contains(.shift) {
+                        appState.isEditingItemText = false
+                        makeFirstResponder(nil)
+                        return
+                    }
                 case 53: // Escape — close picker
                     close()
                     return
