@@ -101,7 +101,8 @@ struct HistoryRowView: View {
                                 item.displayText.isEmpty ? "Untitled" : item.displayText,
                                 terms: item.displayText.isEmpty ? [] : searchTerms,
                                 foreground: theme.resolvedSearchHighlight,
-                                background: theme.resolvedSearchHighlightBackground
+                                background: theme.resolvedSearchHighlightBackground,
+                                textGlow: theme.resolvedSearchHighlightTextGlow
                             )
                                 .font(item.isMonospace
                                     ? .system(size: 12, design: .monospaced)
@@ -111,8 +112,6 @@ struct HistoryRowView: View {
                                 .multilineTextAlignment(.leading)
                                 .shadow(color: activeTextGlow?.color ?? .clear, radius: activeTextGlow?.radius ?? 0)
                                 .shadow(color: activeTextGlow?.innerColor ?? .clear, radius: activeTextGlow?.innerRadius ?? 0)
-                                .shadow(color: !searchTerms.isEmpty ? (theme.resolvedSearchHighlightTextGlow?.color ?? .clear) : .clear,
-                                        radius: !searchTerms.isEmpty ? (theme.resolvedSearchHighlightTextGlow?.radius ?? 0) : 0)
                         }
                     }
                 }
@@ -166,12 +165,10 @@ struct HistoryRowView: View {
             }
 
             if let description = item.snippetDescription, !description.isEmpty {
-                highlightedText(description, terms: searchTerms, foreground: theme.resolvedSearchHighlight, background: theme.resolvedSearchHighlightBackground)
+                highlightedText(description, terms: searchTerms, foreground: theme.resolvedSearchHighlight, background: theme.resolvedSearchHighlightBackground, textGlow: theme.resolvedSearchHighlightTextGlow)
                     .font(.system(size: 11))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
-                    .shadow(color: !searchTerms.isEmpty ? (theme.resolvedSearchHighlightTextGlow?.color ?? .clear) : .clear,
-                            radius: !searchTerms.isEmpty ? (theme.resolvedSearchHighlightTextGlow?.radius ?? 0) : 0)
                     .padding(.leading, 22)
             }
 
@@ -352,20 +349,44 @@ struct HistoryRowView: View {
     }
 }
 
-private func highlightedText(_ string: String, terms: [String], foreground: Color, background: Color?) -> Text {
-    guard !terms.isEmpty else { return Text(string) }
-    var attr = AttributedString(string)
+private func buildHighlightAttrs(
+    _ string: String, terms: [String], foreground: Color, background: Color?, glowColor: Color?
+) -> (main: AttributedString, glow: AttributedString?) {
+    var mainAttr = AttributedString(string)
+    var glowAttr: AttributedString? = glowColor != nil ? AttributedString(string) : nil
+    if glowColor != nil { glowAttr!.foregroundColor = .clear }
     for term in terms {
         var start = string.startIndex
         while let range = string.range(of: term, options: [.caseInsensitive], range: start..<string.endIndex) {
-            if let attrStart = AttributedString.Index(range.lowerBound, within: attr),
-               let attrEnd = AttributedString.Index(range.upperBound, within: attr) {
-                attr[attrStart..<attrEnd].foregroundColor = foreground
-                if let background { attr[attrStart..<attrEnd].backgroundColor = background }
-                attr[attrStart..<attrEnd].inlinePresentationIntent = .stronglyEmphasized
+            if let attrStart = AttributedString.Index(range.lowerBound, within: mainAttr),
+               let attrEnd = AttributedString.Index(range.upperBound, within: mainAttr) {
+                mainAttr[attrStart..<attrEnd].foregroundColor = foreground
+                if let background { mainAttr[attrStart..<attrEnd].backgroundColor = background }
+                mainAttr[attrStart..<attrEnd].inlinePresentationIntent = .stronglyEmphasized
+                glowAttr?[attrStart..<attrEnd].foregroundColor = glowColor
+                glowAttr?[attrStart..<attrEnd].inlinePresentationIntent = .stronglyEmphasized
             }
             start = range.upperBound
         }
     }
-    return Text(attr)
+    return (mainAttr, glowAttr)
+}
+
+@ViewBuilder
+private func highlightedText(_ string: String, terms: [String], foreground: Color, background: Color?, textGlow: Theme.ResolvedGlow? = nil) -> some View {
+    if terms.isEmpty {
+        Text(string)
+    } else {
+        let (mainAttr, glowAttr) = buildHighlightAttrs(string, terms: terms, foreground: foreground, background: background, glowColor: textGlow?.color)
+        if let glow = textGlow, let ga = glowAttr {
+            Text(mainAttr)
+                .overlay(alignment: .topLeading) {
+                    Text(ga)
+                        .shadow(color: glow.color, radius: glow.radius)
+                        .allowsHitTesting(false)
+                }
+        } else {
+            Text(mainAttr)
+        }
+    }
 }
