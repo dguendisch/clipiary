@@ -472,25 +472,6 @@ struct Theme: Codable, Sendable, Equatable {
         spacing: .default
     )
 
-    static let moonlight = Theme(
-        id: "moonlight",
-        name: "Moonlight",
-        options: Options(useMaterial: false, useSystemAccent: false),
-        fills: Fills(
-            panel: .solid("#2D2B3D"), tabBar: .solid("#232136", opacity: 0.6),
-            rowSelected: .solid("#B4A7D6", opacity: 0.18), rowHovered: .solid("#B4A7D6", opacity: 0.08),
-            card: .solid("#232136", opacity: 0.6), overlay: .solid("#1A1829", opacity: 0.5)
-        ),
-        colors: Colors(
-            accent: "#B4A7D6",
-            pillBackground: "#9590AD", pillBackgroundOpacity: 0.15,
-            shortcutKeyBackground: "#232136", shortcutKeyBackgroundOpacity: 0.5,
-            cardStroke: "#B4A7D6", cardStrokeOpacity: 0.08,
-            imageIndicator: "#E0AF68", statusReady: "#9ECE6A", statusWarning: "#E0AF68",
-            gaugeUnfilled: "#9590AD", gaugeUnfilledOpacity: 0.12
-        )
-    )
-
     static let rose = Theme(
         id: "rose",
         name: "Rose",
@@ -534,25 +515,6 @@ struct Theme: Codable, Sendable, Equatable {
         )
     )
 
-    static let emerald = Theme(
-        id: "emerald",
-        name: "Emerald",
-        options: Options(useMaterial: false, useSystemAccent: false),
-        fills: Fills(
-            panel: .solid("#1A2420"), tabBar: .solid("#15201C", opacity: 0.6),
-            rowSelected: .solid("#50C878", opacity: 0.15), rowHovered: .solid("#50C878", opacity: 0.07),
-            card: .solid("#15201C", opacity: 0.6), overlay: .solid("#0E1612", opacity: 0.55)
-        ),
-        colors: Colors(
-            accent: "#50C878",
-            pillBackground: "#6B8F7A", pillBackgroundOpacity: 0.16,
-            shortcutKeyBackground: "#15201C", shortcutKeyBackgroundOpacity: 0.5,
-            cardStroke: "#50C878", cardStrokeOpacity: 0.06,
-            imageIndicator: "#E0AF68", statusReady: "#50C878", statusWarning: "#E0AF68",
-            gaugeUnfilled: "#5A7A68", gaugeUnfilledOpacity: 0.18
-        )
-    )
-
     static let neonNoir = Theme(
         id: "neon-noir",
         name: "Neon Noir",
@@ -560,6 +522,7 @@ struct Theme: Codable, Sendable, Equatable {
         fills: Fills(
             panel: .linearGradient(["#0D0D12", "#080810"], from: "top", to: "bottom"),
             tabBar: .solid("#08080C", opacity: 0.7),
+            tabButtonSelected: .solid("#FF2D6F", opacity: 0.22),
             rowSelected: .solid("#FF2D6F", opacity: 0.18),
             rowHovered: .solid("#FF2D6F", opacity: 0.08),
             card: .solid("#08080C", opacity: 0.7),
@@ -575,7 +538,7 @@ struct Theme: Codable, Sendable, Equatable {
         ),
         borders: Borders(
             panel: ThemeBorder(color: "#FF2D6F", width: 1, opacity: 0.25),
-            selectedRow: ThemeBorder(color: "#FF2D6F", width: 1, opacity: 0.5)
+            selectedRow: ThemeBorder(color: "#FF2D6F", width: 1, opacity: 0.5, animation: "sweep")
         ),
         effects: Effects(
             selectedRowGlow: ThemeGlow(color: "#FF2D6F", radius: 14, opacity: 0.3, innerRadius: 3, innerOpacity: 0.85),
@@ -600,6 +563,7 @@ struct Theme: Codable, Sendable, Equatable {
         fills: Fills(
             panel: .linearGradient(["#1A1028", "#220E38"], from: "top", to: "bottom"),
             tabBar: .solid("#140C22", opacity: 0.6),
+            tabButtonSelected: .linearGradient(["#FF71CE", "#B967FF"], from: "leading", to: "trailing", opacity: 0.3),
             rowSelected: .linearGradient(["#FF71CE", "#B967FF"], from: "leading", to: "trailing", opacity: 0.15),
             rowHovered: .solid("#B967FF", opacity: 0.1),
             card: .solid("#140C22", opacity: 0.6),
@@ -614,7 +578,8 @@ struct Theme: Codable, Sendable, Equatable {
             gaugeUnfilled: "#B967FF", gaugeUnfilledOpacity: 0.12
         ),
         effects: Effects(
-            selectedRowGlow: ThemeGlow(color: "#FF71CE", radius: 6, opacity: 0.3),
+            selectedRowGlow: ThemeGlow(color: "#FF71CE", radius: 8, opacity: 0.35, innerRadius: 3, innerOpacity: 0.75),
+            hoveredRowGlow: ThemeGlow(color: "#B967FF", radius: 4, opacity: 0.2, innerRadius: 2, innerOpacity: 0.5),
             panelGlow: ThemeGlow(color: "#B967FF", radius: 12, opacity: 0.15)
         ),
         cornerRadii: CornerRadii(
@@ -651,6 +616,7 @@ struct Theme: Codable, Sendable, Equatable {
         fills: Fills(
             panel: .linearGradient(["#2F2F2F", "#12100A"], from: "top", to: "bottom", opacity: 0.9),
             tabBar: .solid("#0A0800", opacity: 0.1),
+            tabButtonSelected: .solid("#FF6A00", opacity: 0.18),
             rowSelected: .solid("#FF6A00", opacity: 0.14),
             rowHovered: .solid("#FF6A00", opacity: 0.06),
             card: .solid("#AAAAAA", opacity: 0.1),
@@ -668,7 +634,7 @@ struct Theme: Codable, Sendable, Equatable {
         borders: Borders(
             panel: ThemeBorder(color: "#000000", width: 1, opacity: 0.5),
             contentArea: ThemeBorder(color: "#FF6A00", width: 1, opacity: 0.08),
-            selectedRow: ThemeBorder(color: "#FF6A00", width: 1, opacity: 0.4),
+            selectedRow: ThemeBorder(color: "#FF6A00", width: 1, opacity: 0.4, animation: "flash"),
             card: ThemeBorder(color: "#000000", width: 1, opacity: 0.12)
         ),
         effects: Effects(
@@ -706,7 +672,13 @@ struct Theme: Codable, Sendable, Equatable {
         ),
         effects: Effects(
             selectedRowGlow: ThemeGlow(color: "#FF6A00", radius: 6, opacity: 0.8),
-            hoveredRowGlow: ThemeGlow(color: "#FF0000", radius: 5, opacity: 1.0)
+            hoveredRowGlow: ThemeGlow(color: "#FF0000", radius: 5, opacity: 1.0),
+            searchHighlightTextGlow: ThemeGlow(color: "#FFCC00", radius: 5, opacity: 0.8)
+        ),
+        cornerRadii: CornerRadii(
+            panel: 14, contentArea: 12, card: 10, tabBar: 10,
+            row: 8, searchField: 8, tabButton: 8,
+            pickerRow: 6, shortcutRecordField: 6, keyBadge: 3, gauge: 1
         ),
         spacing: Spacing(
             panelPadding: 10, sectionSpacing: 10,
@@ -727,6 +699,7 @@ struct Theme: Codable, Sendable, Equatable {
                 columns: 3, rows: 3
             ),
             tabBar: .solid("#000000", opacity: 0.05),
+            tabButtonSelected: .solid("#FFFFFF", opacity: 0.1),
             rowSelected: ThemeFill(opacity: 0.18),
             rowHovered: ThemeFill(opacity: 0.09),
             card: .solid("#000000", opacity: 0.15),
@@ -760,6 +733,7 @@ struct Theme: Codable, Sendable, Equatable {
                 columns: 3, rows: 3
             ),
             tabBar: .solid("#040A18", opacity: 0.5),
+            tabButtonSelected: .solid("#4EA8DE", opacity: 0.2),
             rowSelected: .solid("#4EA8DE", opacity: 0.15),
             rowHovered: .solid("#4EA8DE", opacity: 0.07),
             card: .solid("#040A18", opacity: 0.5),
@@ -775,7 +749,8 @@ struct Theme: Codable, Sendable, Equatable {
             gaugeUnfilled: "#4EA8DE", gaugeUnfilledOpacity: 0.12
         ),
         effects: Effects(
-            selectedRowGlow: ThemeGlow(color: "#4EA8DE", radius: 6, opacity: 0.25),
+            selectedRowGlow: ThemeGlow(color: "#4EA8DE", radius: 8, opacity: 0.3, innerRadius: 2, innerOpacity: 0.65),
+            hoveredRowGlow: ThemeGlow(color: "#4EA8DE", radius: 4, opacity: 0.15, innerRadius: 1.5, innerOpacity: 0.4),
             panelGlow: ThemeGlow(color: "#1E0048", radius: 24, opacity: 0.35)
         ),
         cornerRadii: CornerRadii(
@@ -786,7 +761,7 @@ struct Theme: Codable, Sendable, Equatable {
     )
 
     static let builtInThemes: [Theme] = [
-        .default, .macOSLight, .moonlight, .rose, .nord, .emerald, .neonNoir, .sciFi, .space, .deepSpace, .vapor, .nebula,
+        .default, .macOSLight, .rose, .nord, .neonNoir, .sciFi, .space, .deepSpace, .vapor, .nebula,
     ]
 
     // MARK: - Initializers
